@@ -3,7 +3,7 @@ use warnings;
 
 use PDL;
 use PDL::NiceSlice;
-use PDL::Parallel::threads qw(retrieve_pdl);
+use PDL::Parallel::threads qw(retrieve_pdls);
 use PDL::Parallel::threads::SIMD qw(barrier_sync launch_simd);
 my $piddle = zeroes(20);
 $piddle->share_as('test');
@@ -22,7 +22,7 @@ my $N_threads = 5;
 
 launch_simd($N_threads, sub {
 	my $tid = shift;
-	my $piddle = retrieve_pdl('test');
+	my $piddle = retrieve_pdls('test');
 	
 	print "Thread id $tid says the piddle is $piddle\n";
 	barrier_sync;
@@ -44,7 +44,7 @@ launch_simd($N_threads, sub {
 print "mmap is $mmap\n";
 launch_simd($N_threads, sub {
 	my $tid = shift;
-	my $mmap = retrieve_pdl('mmap');
+	my $mmap = retrieve_pdls('mmap');
 	
 	$mmap($tid) .= $tid;
 });
@@ -53,7 +53,7 @@ print "now mmap is $mmap\n";
 
 launch_simd($N_threads, sub {
 	my $tid = shift;
-	my $piddle = retrieve_pdl('test');
+	my $piddle = retrieve_pdls('test');
 	
 	print "Thread id is $tid\n";
 	
@@ -62,7 +62,7 @@ launch_simd($N_threads, sub {
 	use PDL::NiceSlice;
 	$piddle($idx) .= -$tid;
 	
-	my $slice = retrieve_pdl('slice');
+	my $slice = retrieve_pdls('slice');
 	$slice($tid) .= -10 * $tid;
 });
 

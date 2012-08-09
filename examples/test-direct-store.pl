@@ -4,9 +4,7 @@ use warnings;
 use PDL;
 use PDL::Parallel::threads qw(retrieve_pdls);
 use PDL::Parallel::threads::SIMD qw(barrier_sync launch_simd);
-my $piddle = zeroes(20);
-$piddle->share_as('test');
-undef($piddle);
+zeroes(20)->share_as('test');
 
 my $N_threads = 5;
 
@@ -33,4 +31,5 @@ launch_simd($N_threads, sub {
 });
 
 
+my $piddle = retrieve_pdls('test');
 print "Final piddle value is $piddle\n";

@@ -16,9 +16,9 @@ static void default_magic (pdl *p, size_t pa) {
 
 MODULE = PDL::Parallel::threads           PACKAGE = PDL::Parallel::threads
 
-/* Integers (which can be cast to and from pointers) are easily shared using
- * threads::shared and a shared hash. This method provides a way to obtain
- * that most useful pointer. */
+# Integers (which can be cast to and from pointers) are easily shared using
+# threads::shared and a shared hash. This method provides a way to obtain
+# that most useful pointer.
 size_t
 _get_pointer (piddle)
 	pdl * piddle
@@ -27,9 +27,9 @@ _get_pointer (piddle)
 	OUTPUT:
 		RETVAL
 
-/* Given the pointer value that was retrieved with _get_pointer, this method
- * builds a new piddle that is a thin copy of the old piddle. In particular,
- * it uses the exact same data and datasv pointers. */
+# Given the pointer value that was retrieved with _get_pointer, this method
+# builds a new piddle that is a thin copy of the old piddle. In particular,
+# it uses the exact same data and datasv pointers.
 pdl*
 _wrap (data_pointer)
 	size_t data_pointer
