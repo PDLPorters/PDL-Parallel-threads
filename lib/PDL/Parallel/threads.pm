@@ -44,6 +44,7 @@ sub remove_pdls {
 sub PDL::share_as {
 	my ($self, $name) = @_;
 	share_pdls($name => $self);
+	return $self;
 }
 
 sub retrieve_pdls {
