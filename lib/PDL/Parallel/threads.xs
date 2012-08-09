@@ -8,32 +8,32 @@
 static Core* PDL;
 static SV* CoreSV;
 
-//typedef void (*DelMagic)(pdl *, int param);
 static void default_magic (pdl *p, size_t pa) {
+	/* Zero the data pointers so that deletion doesn't screw with them. */
 	p->data = 0;
 	p->datasv = 0;
-	SvREFCNT_dec(p->datasv);
 }
 
 MODULE = PDL::Parallel::threads           PACKAGE = PDL::Parallel::threads
 
+/* Integers (which can be cast to and from pointers) are easily shared using
+ * threads::shared and a shared hash. This method provides a way to obtain
+ * that most useful pointer. */
 size_t
 _get_pointer (piddle)
 	pdl * piddle
 	CODE:
-		/* Increment the ref count of the original SV so it doesn't go away */
-		/*SvREFCNT_inc(piddle->sv);
-		*/SvREFCNT_inc(piddle->datasv);
 		RETVAL = (size_t)(piddle);
 	OUTPUT:
 		RETVAL
 
+/* Given the pointer value that was retrieved with _get_pointer, this method
+ * builds a new piddle that is a thin copy of the old piddle. In particular,
+ * it uses the exact same data and datasv pointers. */
 pdl*
 _wrap (data_pointer)
 	size_t data_pointer
 	CODE:
-	//	RETVAL = (pdl*) data_pointer;
-	
 		pdl * old_pdl = (pdl*) data_pointer;	/* retrieve the parent piddle */
 		pdl * new_pdl = PDL->pdlnew();			/* get a new container */
 		
@@ -49,9 +49,6 @@ _wrap (data_pointer)
 		/* Tell the piddle that it doesn't really own the data */
 		new_pdl->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
 		PDL->add_deletedata_magic(new_pdl, default_magic, 0);
-		
-		/* Increment the reference count on the datasv */
-		SvREFCNT_inc(new_pdl->datasv);
 		
 		RETVAL = new_pdl;
 	OUTPUT:

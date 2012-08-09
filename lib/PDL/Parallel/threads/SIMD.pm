@@ -20,7 +20,8 @@ our $VERSION = '0.01';
 require Exporter;
 our @ISA = qw(Exporter);
 
-our @EXPORT = qw(barrier_sync launch_simd);
+
+our @EXPORT_OK = qw(barrier_sync launch_simd);
 
 use threads qw(yield);
 use threads::shared qw(cond_wait);
@@ -61,10 +62,19 @@ sub barrier_sync {
 # SIMD launching #
 ##################
 
+sub run_it {
+	my ($tid, $subref, @args) = @_;
+	$subref->($tid, @args);
+	
+	barrier_sync;
+}
+
 sub launch_simd {
-	($N_threads, my $subref, my @args) = @_;
-	threads->create($subref, @args) for (1..$N_threads-1);
-	$subref->(@args);
+	($N_threads, my @args) = @_;
+	# Launch N-1 threads...
+	threads->create(\&run_it, $_, @args) for (1..$N_threads-1);
+	# ... and execute the last thread in this, the main thread
+	run_it(0, @args);
 	
 	# Reap the threads
 	for my $thr (threads->list) {
