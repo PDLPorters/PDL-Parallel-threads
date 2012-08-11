@@ -51,7 +51,7 @@ sub share_pdls {
 		if ( eval{$to_store->isa("PDL")} ) {
 			# Share piddle memory directly
 			$datasv_pointers{$name} = _get_and_mark_datasv_pointer($to_store);
-			if ($datasv_pointers{$name}) {
+			if ($datasv_pointers{$name} == 0) {
 				delete $datasv_pointers{$name};
 				croak(join('', 'Cannot share piddles for which the data is ',
 						'*not* from the datasv, which is the case for ',
@@ -121,6 +121,9 @@ sub PDL::share_as {
 # Method to get a piddle that points to the shared data assocaited with the
 # given name(s).
 sub retrieve_pdls {
+	
+	return if @_ == 0;
+	
 	my @to_return;
 	for my $name (@_) {
 		if (exists $datasv_pointers{$name}) {
@@ -144,7 +147,16 @@ sub retrieve_pdls {
 			croak("retrieve_pdls could not find data associated with '$name'");
 		}
 	}
+	
+	# In list context, return all the piddles
 	return @to_return if wantarray;
+	
+	# Scalar context only makes sense if they asked for a single name
+	return $to_return[0] if @_ == 1;
+	
+	# We're here if they asked for multiple names but assigned the result
+	# to a single scalar, which is probably not what they meant:
+	carp("retrieve_pdls: requested many piddles... in scalar context?");
 	return $to_return[0];
 }
 
@@ -303,7 +315,8 @@ This doesn't work with memory mapped piddles at the moment, unfortunately.
 
 This function takes a list of names and returns a list of piddles that use
 the shared data. In scalar context the function returns the piddle
-corresponding with the first named data set.
+corresponding with the first named data set, which is usually what you mean
+when you use a single name.
 
 =for example
 
@@ -312,7 +325,7 @@ corresponding with the first named data set.
  my ($foo, $bar) = retrieve_pdls('foo', 'bar');
 
 This function works transparently, whether the shared data is a memory mapped
-file or a physical piddle.
+file or a physical piddle. XXX
 
 =item free_pdls(name, name, ...)
 
