@@ -21,7 +21,7 @@ BEGIN {
 my %datasv_pointers :shared;
 my %dim_arrays :shared;
 my %types :shared;
-#my %file_names :shared;
+my %file_names :shared;
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -38,47 +38,55 @@ sub share_pdls {
 	while (my ($name, $to_store) = each %to_store) {
 		
 		# Make sure we're not overwriting already shared data
-		if (exists $datasv_pointers{$name}) {# or exists $file_names{$name}) {
+		if (exists $datasv_pointers{$name} or exists $file_names{$name}) {
 			croak("share_pdls: you already have data associated with '$name'");
 		}
 		
-#		# Handle the special case where a memory mapped piddle was sent, and
-#		# for which the memory mapped piddle knows its file name
-#		if ( eval{$to_store->isa("PDL")} and exists $to_store->hdr->{"mmapped_filename"}) {
-#			$to_store = $to_store->hdr->{"mmapped_filename"};
-#		}
+		# Handle the special case where a memory mapped piddle was sent, and
+		# for which the memory mapped piddle knows its file name
+		if ( eval{$to_store->isa("PDL")}
+			and exists $to_store->hdr->{mmapped_filename}
+		) {
+			$to_store = $to_store->hdr->{mmapped_filename};
+		}
 		
 		if ( eval{$to_store->isa("PDL")} ) {
 			# Share piddle memory directly
 			$datasv_pointers{$name} = _get_and_mark_datasv_pointer($to_store);
 			if ($datasv_pointers{$name} == 0) {
 				delete $datasv_pointers{$name};
-				croak(join('', 'Cannot share piddles for which the data is ',
-						'*not* from the datasv, which is the case for ',
-						"'$name'"));
+				croak(join('', 'Apart from memory mapped piddles created ',
+					"using PDL::IO::FastRaw, PDL::Parallel::threads cannot\n",
+					'share piddles for which the data is *not* from the ',
+					"datasv, which is the case for '$name'"));
 			}
 			$dim_arrays{$name} = shared_clone([$to_store->dims]);
 			$types{$name} = $to_store->get_datatype;
 		}
-#		elsif (ref($to_store) eq '') {
-#			# A file name, presumably; share via memory mapping
-#			if (-w $name) {
-#				$file_names{$name} = $to_store;
-#			}
-#			else {
-#				my $to_croak = join('', 'When share_pdls gets a scalar, it '
-#									, 'expects that to be a file to share as '
-#									, "memory mapped data.\n For key '$name', "
-#									, "'$to_store' was given, but ");
-#				# In the case the file is read only:
-#				croak("$to_croak you do not seem to have write permissions "
-#						. "for that file") if -f $to_store;
-#				# In th case the file does not exist
-#				croak("$to_croak the file does not exist");
-#			}
-#		}
+		elsif (ref($to_store) eq '') {
+			# A file name, presumably; share via memory mapping
+			if (-w $to_store and -r "$to_store.hdr") {
+				$file_names{$name} = $to_store;
+			}
+			else {
+				my $to_croak = join('', 'When share_pdls gets a scalar, it '
+									, 'expects that to be a file to share as '
+									, "memory mapped data.\nFor key '$name', "
+									, "'$to_store' was given, but");
+				# In the case the file is read only:
+				croak("$to_croak there is no associated header file")
+					unless -f "$to_store.hdr";
+				croak("$to_croak you do not have permissions to read the "
+					. "associated header file") unless -r "$to_store.hdr";
+				croak("$to_croak you do not have write permissions for that "
+					. "file") if -f $to_store;
+				# In th case the file does not exist
+				croak("$to_croak the file does not exist");
+			}
+		}
 		else {
-			croak("share_pdls passed data under '$name' that it doesn't know how to store");
+			croak("share_pdls passed data under '$name' that it doesn't "
+				. "know how to store");
 		}
 	}
 }
@@ -98,10 +106,10 @@ sub free_pdls {
 			push @removed, $name;
 		}
 		# If it's mmapped, remove the file name
-#		elsif (exists $file_names{$name}) {
-#			delete $file_names{$name};
-#			push @removed, $name;
-#		}
+		elsif (exists $file_names{$name}) {
+			delete $file_names{$name};
+			push @removed, $name;
+		}
 		# If its none of the above, indicate that we didn't free anything
 		else {
 			push @removed, 0;
@@ -121,7 +129,6 @@ sub PDL::share_as {
 # Method to get a piddle that points to the shared data assocaited with the
 # given name(s).
 sub retrieve_pdls {
-	
 	return if @_ == 0;
 	
 	my @to_return;
@@ -140,9 +147,9 @@ sub retrieve_pdls {
 			
 			push @to_return, $new_piddle;
 		}
-#		elsif (exists $file_names{$name}) {
-#			push @to_return, mapfraw($file_names{$name});
-#		}
+		elsif (exists $file_names{$name}) {
+			push @to_return, mapfraw($file_names{$name});
+		}
 		else {
 			croak("retrieve_pdls could not find data associated with '$name'");
 		}
@@ -158,6 +165,23 @@ sub retrieve_pdls {
 	# to a single scalar, which is probably not what they meant:
 	carp("retrieve_pdls: requested many piddles... in scalar context?");
 	return $to_return[0];
+}
+
+# Now for a nasty hack: this code modifies PDL::IO::FastRaw's symbol table
+# so that it adds the "mmapped_filename" key to the piddle's header before
+# returning the result. As long as the user says "use PDL::IO::FastRaw"
+# *after* using this module, this will allow for transparent sharing of both
+# memory mapped and standard piddles.
+
+{
+	no warnings 'redefine';
+	my $old_sub = \&PDL::IO::FastRaw::mapfraw;
+	*PDL::IO::FastRaw::mapfraw = sub {
+		my $name = $_[0];
+		my $to_return = $old_sub->(@_);
+		$to_return->hdr->{mmapped_filename} = $name;
+		return $to_return;
+	};
 }
 
 1;
