@@ -30,12 +30,20 @@ our @EXPORT_OK = qw(share_pdls retrieve_pdls free_pdls);
 # PDL data should not be naively copied by Perl
 sub PDL::CLONE_SKIP { 1 }
 
+sub auto_package_name {
+	my $name = shift;
+	my ($package_name) = caller(1);
+	$name = join('::', $package_name, $name) if $name =~ /^\w+$/;
+	return $name;
+}
+
 sub share_pdls {
 	croak("PDL::Parallel::threads::share_pdl expects key/value pairs")
 		unless @_ == 2;
 	my %to_store = @_;
 	
 	while (my ($name, $to_store) = each %to_store) {
+		$name = auto_package_name($name);
 		
 		# Make sure we're not overwriting already shared data
 		if (exists $datasv_pointers{$name} or exists $file_names{$name}) {
@@ -87,7 +95,7 @@ sub share_pdls {
 		else {
 			croak("share_pdls passed data under '$name' that it doesn't "
 				. "know how to store");
-		}
+				}
 	}
 }
 
@@ -96,7 +104,9 @@ sub free_pdls {
 	# Keep track of each name that is successfully freed
 	my @removed;
 	
-	for my $name (@_) {
+	for my $short_name (@_) {
+		my $name = auto_package_name($short_name);
+		
 		# If it's a regular piddle, decrement the memory's refcount
 		if (exists $datasv_pointers{$name}) {
 			_dec_datasv_refcount($datasv_pointers{$name});
@@ -112,7 +122,7 @@ sub free_pdls {
 		}
 		# If its none of the above, indicate that we didn't free anything
 		else {
-			push @removed, 0;
+			push @removed, '';
 		}
 	}
 	
@@ -122,7 +132,7 @@ sub free_pdls {
 # PDL method to share an individual piddle
 sub PDL::share_as {
 	my ($self, $name) = @_;
-	share_pdls($name => $self);
+	share_pdls(auto_package_name($name) => $self);
 	return $self;
 }
 
@@ -132,7 +142,9 @@ sub retrieve_pdls {
 	return if @_ == 0;
 	
 	my @to_return;
-	for my $name (@_) {
+	for my $short_name (@_) {
+		my $name = auto_package_name($short_name);
+		
 		if (exists $datasv_pointers{$name}) {
 			# Create the new thinly wrapped piddle
 			my $new_piddle = _new_piddle_around($datasv_pointers{$name});
@@ -216,12 +228,12 @@ This documentation describes version 0.02 of PDL::Parallel::threads.
  share_pdls(some_name => $test_data);  # allows multiple at a time
  $test_data->share_as('some_name');    # or use the PDL method
  
- ## # Or work with memory mapped files: XXX
- ## share_pdls(other_name => 'mapped_file.dat');
+ # Or work with memory mapped files:
+ share_pdls(other_name => 'mapped_file.dat');
  
  # Kick off some processing in the background
  async {
-     my ($shallow_copy, $mapped_piddle)  # XXX
+     my ($shallow_copy, $mapped_piddle)
          = retrieve_pdls('some_name', 'other_name');
      
      # thread-local memory
@@ -250,47 +262,107 @@ L<PDL::ParallelCPU>), this module lets you work with Perl's built-in
 threading model. In contrast to Perl's L<threads::shared>, this module
 focuses on sharing I<data>, not I<variables>.
 
-This module lets you share data by two means. First, you can share the
-actual physical memory associated with a piddle that you create in your code.
-XXX Second, you can share data using memory mapped files.
+Because this module focuses on sharing data, not variables, it does not use
+attributes to mark shared variables. Instead, you must explicitly share your
+data by using the C<share_pdls> function or C<share_as> PDL method that this
+module introduces. Those both associate a name with your data, which you use
+later to retrieve the data with the C<retrieve_pdls>. Once your thread has
+access to the piddle data, any modifications will operate directly on the
+shared memory, which is exactly what shared data is supposed to do. When you
+are completely done using a piece of data, you need to explicitly remove the
+data from the shared pool with the C<free_pdls> function. Otherwise you have
+a memory leak.
+
+This module lets you share two sorts of piddle data. You can share data for
+a piddle that is based on actual I<physical memory>, such as the result of
+C<zeroes>. You can also share data using I<memory mapped> files. There are
+other sorts of piddles whose data you cannot share. You cannot directly
+share slices (though a simple C<sever> or C<copy> command will give you a
+piddle based on physical memory that you can share). Also, certain functions
+wrap external data into piddles so you can manipulate them with PDL methods.
+For example, see C<PDL::Graphics::PLplot/plmap> and
+C<PDL::Graphics::PLplot/plmeridians>. For these, making a physical copy with
+PDL's C<copy> method will give you something that you can safey share.
+
+=head2 Physical Memory
 
 The mechanism by which this module achieves data sharing of physical memory
 is remarkably cheap. It's even cheaper then a simple affine transformation.
 It is so cheap, in fact, that it does not work for all kinds of PDL data.
-The sharing works by creating a new shell of a piddle in each requesting
-thread and setting that piddle's memory structure to point back to the same
+The sharing works by creating a new shell of a piddle for each retrieval and
+setting that piddle's memory structure to point back to the same
 locations of the original (shared) piddle. This means that you can share
-piddles that are created with standard constructos like C<zeroes>,
+piddles that are created with standard constructors like C<zeroes>,
 C<pdl>, and C<sequence>, or which are the result of operations and function
 evaluations for which there is no data flow, such as C<cat> (but
 not C<dog>), arithmetic, C<copy>, and C<sever>. When in doubt, C<sever> your
 piddle before sharing and everything should work.
 
+=head2 Memory Mapped Data
+
 The mechanism by which this module achieves data sharing of memory mapped
-files is exactly how you would share data using memory mapping. In particular,
-you must have a file with raw data already on disk before you perform any
-data retrieval.
+files is exactly how you would share data across threads or processes using 
+L<PDL::IO:::FastRaw>. However, there are a couple of important caveats to
+using memory mapped piddls with C<PDL::Parallel::threads>. First, you must
+load C<PDL::Parallel::threads> before loading L<PDL::IO::FastRaw>:
 
-Unfortunately, at the moment there is an important distinction when sharing
-(but not retrieving) memory mapped vs physical piddles. I believe this can
-be fixed by making a few changes to how current PDL memory mapping routines
-mark their piddles. Stay tuned...
+ # Good
+ use PDL::Parallel::threads qw(retrieve_pdls);
+ use PDL::IO::FastRaw;
+ 
+ # BAD
+ use PDL::IO::FastRaw;
+ use PDL::Parallel::threads qw(retrieve_pdls);
 
-C<PDL::Parallel::threads> behaves differently from L<threads::shared> because
-it focuses on sharing data, not variables. As such, it does not use attributes
-to mark shared variables. Instead, you must explicitly share your data by using
-the C<share_pdls> function or C<share_as> PDL method that this module
-introduces. Those both associate a name with your data, which you use later
-to retrieve the data with the C<retrieve_pdls>. Once your thread has access to
-the piddle data, any modifications will operate directly on the shared
-memory, which is exactly what shared data is supposed to do. When you are
-completely done using a piece of data, you need to explicitly remove the data
-from the shared pool with the C<free_pdls> function. Otherwise you have a
-memory leak.
+This is necessary because C<PDL::Parallel::threads> has to perform a few
+internal tweaks to L<PDL::IO::FastRaw> before you load its fuctions into
+your local package.
+
+Furthermore, any memory mapped files B<must> have header files associated
+with the data file. That is, if the data file is F<foo.dat>, you must have
+a header file called F<foo.dat.hdr>. This is overly restrictive and in the
+future the module may perform more internal tweaks to L<PDL::IO::FastRaw> to
+store whatever options were used to create the original piddle. But for the
+meantime, be sure that you have a header file for your raw data file.
+
+=head2 Package and Name Munging
+
+C<PDL::Parallel::threads> provides a global namespace. Without some
+combination of discipline and help, it would be easy for shared memory names
+to clash. One solution to this would be to require users (i.e. you) to
+choose names that include thier current package, such as
+C<My::Module::workspace> instead of just C<workspace>. Well, I decided that
+this is such a good idea that C<PDL::Parallel::threads> does this for you
+automatically. At least, most of the time.
+
+The basic rules are that the package name is prepended to the name of the
+shared memory as long as the name is only composed of word characters, i.e.
+names matching C</^\w+$/>. Here's an example demonstrating how this works:
+
+ package Some::Package;
+ use PDL;
+ use PDL::Parallel::threads 'retrieve_pdls';
+ 
+ # Stored under '??foo'
+ sequence(20)->share_as('??foo');
+ 
+ # Shared as 'Some::Package::foo'
+ zeroes(100)->share_as('foo');
+ 
+ # Retrieves 'Some::Package::foo'
+ my $copy = retrieve_pdls('foo');
+ 
+ # To retrieve shared data from some other package,
+ # use the fully qualified name:
+ my $other_data = retrieve_pdls('Other::Package::foo');
+
+The upshot of all of this is that namespace clashes are very unlikely to
+occur with shared data from other modules as long as you use simple names,
+like the sort of thing that works for variable names.
 
 =head1 FUNCTIONS AND METHODS
 
-This modules provides three stand-alone functions and adds one new PDL method.
+This module provides three stand-alone functions and adds one new PDL method.
 
 =over
 
@@ -301,24 +373,26 @@ or the file name to memory map, and the key is the name under which to store
 the piddle or file name. You can later retrieve the memory (or a piddle
 mapped to the given file name) with the L</retrieve_pdls> method.
 
-At the moment, if you pass a B<piddle> that is memory mapped (rather than
-the file name associated with that memory mapping), C<share_pdls>
-will croak. Unfortunately, this means that you must understand your data's
-provenance, which may not always be possible. There may be some fancy way to
-work around this, but it is a limitation of the current design.
-
-Sharing a piddle with physical memory (as opposed to one that is memory
-mapped) increments the data's reference count; you can decrement the
-reference count by calling L</free_pdls> on the given C<name>. In general
-this ends up doing what you mean, and freeing memory only when you are
-really done using it. Memory mapped data does not need to worry about
-reference counting as there is always a persistent copy on disk.
+Sharing a piddle with physical memory increments the data's reference count;
+you can decrement the reference count by calling L</free_pdls> on the given
+C<name>. In general this ends up doing what you mean, and freeing memory
+only when you are really done using it. Memory mapped data does not need to
+worry about reference counting as there is always a persistent copy on disk.
 
 =for example
 
  my $data1 = zeroes(20);
  my $data2 = ones(30);
  share_pdls(foo => $data1, bar => $data2);
+
+This can be combined with constructors and fat commas to allocate a
+collection of shared memory that you may need to use for your algorithm:
+
+ share_pdls(
+     main_data => zeroes(1000, 1000),
+     workspace => zeroes(1000),
+     reduction => zeroes(100),
+ );
 
 =item piddle->share_as(name)
 
@@ -328,19 +402,29 @@ different:
 
 =for example
 
+ # Directly share some constructed memory
+ sequence(20)->share_as('baz');
+ 
+ # Share individual piddles:
  my $data1 = zeroes(20);
  my $data2 = ones(30);
  $data1->share_as('foo');
  $data2->share_as('bar');
 
-This doesn't work with memory mapped piddles at the moment, unfortunately.
+There's More Than One Way To Do It, because it can make for easier-to-read
+code. In general I recommend using the C<share_as> method for sharing
+individual piddles:
+
+ $something->where($foo < bar)->share_as('troubling');
 
 =item retrieve_pdls (name, name, ...)
 
 This function takes a list of names and returns a list of piddles that use
 the shared data. In scalar context the function returns the piddle
 corresponding with the first named data set, which is usually what you mean
-when you use a single name.
+when you use a single name. If you specify multiple names but call it in
+scalar context, you will get a warning indicating that you probably meant to
+say something differently.
 
 =for example
 
@@ -348,29 +432,53 @@ when you use a single name.
  my @both_piddles = retrieve_pdls('foo', 'bar');
  my ($foo, $bar) = retrieve_pdls('foo', 'bar');
 
-This function works transparently, whether the shared data is a memory mapped
-file or a physical piddle. XXX
-
 =item free_pdls(name, name, ...)
 
 This function marks the memory associated with the given names as no longer
 being shared, handling all reference counting and other low-level stuff.
+You generally won't need to worry about the return value. But if you care,
+you get a list of values---one for each name---where a successful removal
+gets the name and an unsuccessful removal gets an empty string.
+
+So, if you say C<free_pdls('name1', 'name2')> and both removals were
+successful, you will get C<('name1', 'name2')> as the return values. If
+there was trouble removing C<name1> (because there is no memory associated
+with that name), you will get C<('', 'name2')> instead. This means you
+can handle trouble with perl C<grep>s and other conditionals:
+
+ my @to_remove = qw(name1 name2 name3 name4);
+ my @results = free_pdls(@to_remove);
+ if (not grep {$_ eq 'name2'} @results) {
+     print "That's weird; did you remove name2 already?\n";
+ }
+ if (not $results[2]) {
+     print "Couldn't remove name3 for some reason\n";
+ }
 
 =back
 
-=head1 BUGS AND LIMITATIONS
+=head1 LIMITATIONS
+
+I have tried to make it clear, but in case you missed it, this module does
+not let you share slices or specially marked piddles. If you need to share a
+slice, you should C<sever> or C<copy> the slice first.
+
+Another limitation is that you cannot share memory mapped files that require
+features of L<PDL::IO::FlexRaw>. That is a cool module that lets you pack
+multiple piddles into a single file, but simple cross-thread sharing is not
+trivial and is not (yet) supported.
+
+Finally, you B<must> load C<PDL::Parallel::threads> before loading
+L<PDL::IO::FastRaw> if you wish to share your memory mapped piddles. Also,
+you must have a C<.hdr> file for your data file, which is not strictly
+necessary when using C<mapfraw>. Hopefully that limitation will be lifted
+in forthcoming releases of this module.
+
+=head1 BUGS
 
 Need to make sure the docs get pulled in by the docs database.
 
 Need to write the test suite.
-
-Need to smooth the difference between memory mapping and regular piddles.
-One strategy is to use the datasv part for memory mapped piddles (which isn't
-used for memory mapped piddles) to track the reference counting. To avoid
-hassles with the delete data magic, it might make sense to set the datasv
-to a reference pointing to the actual, original memory mapped piddle, so
-that its delete data magic doesn't get called until the refcount has dropped
-to the appropriate level.
 
 =head1 SEE ALSO
 
