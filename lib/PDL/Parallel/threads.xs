@@ -27,17 +27,26 @@ size_t
 _get_and_mark_datasv_pointer (piddle)
 	pdl * piddle
 	CODE:
-		/* Make sure this'll work for us */
-		if (	piddle->datasv == 0 ||
-				piddle->data != (void*)SvPV_nolen((SV*)(piddle->datasv))
-		) {
-			RETVAL = 0;
+		if (piddle->trans) {
+			croak("the piddle is a slice.\n"); /* Slice, data flow, etc */
+		}
+		else if (0 == (piddle->state & PDL_ALLOCATED)) {
+			croak("the piddle does not have any allocated memory (but is "
+				"not a slice?).\n"); /* Not sure how this happens */
+		}
+		else if (piddle->datasv == 0) {
+			croak("the piddle has no datasv, which means it's probably "
+				"a special piddle.\n"); /* PLplot, mapped with flexraw */
+		}
+		else if (piddle->data != (void*)SvPV_nolen((SV*)(piddle->datasv))) {
+			croak("the piddle's data does not come from the datasv.\n");
+			/* Not sure how this happens. */
 		}
 		else {
 			/* Increment the datasv's refcount */
 			SvREFCNT_inc((SV*)(piddle->datasv));
 			
-			/* Tell this piddle to no longer manage the memory for us */
+			/* Tell this piddle to no longer manage its memory */
 			piddle->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
 			PDL->add_deletedata_magic(piddle, default_magic, 0);
 			

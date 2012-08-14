@@ -60,13 +60,33 @@ sub share_pdls {
 		
 		if ( eval{$to_store->isa("PDL")} ) {
 			# Share piddle memory directly
-			$datasv_pointers{$name} = _get_and_mark_datasv_pointer($to_store);
-			if ($datasv_pointers{$name} == 0) {
+			$datasv_pointers{$name} = eval{_get_and_mark_datasv_pointer($to_store)};
+			if ($@) {
+				my $error = $@;
+				chomp $error;
 				delete $datasv_pointers{$name};
-				croak(join('', 'Apart from memory mapped piddles created ',
-					"using PDL::IO::FastRaw, PDL::Parallel::threads cannot\n",
-					'share piddles for which the data is *not* from the ',
-					"datasv, which is the case for '$name'"));
+				croak('share_pdls: Could not share a piddle under '
+					. "name '$name' because $error");
+
+				
+				print "Got error [[[$error]]]\n";
+				if ($error eq 'not allocated') {
+					croak(join('', 'share_pdls: You tried to share a piddle ',
+						'that did not have allocated memory (probably a ',
+						"slice) under name '$name'"));
+				}
+				elsif ($error eq 'dataflow') {
+					croak(join('', 'share_pdls: You tried to share a piddle ',
+						"under name '$name' that was marked as doing data ",
+						'flow. Consider sharing a copied or severed piddle ',
+						'instead'));
+				}
+				else {
+					croak(join('', 'Apart from memory mapped piddles created ',
+						"using PDL::IO::FastRaw, PDL::Parallel::threads cannot\n",
+						'share piddles for which the data is *not* from the ',
+						"datasv, which is the case for '$name'"));
+				}
 			}
 			$dim_arrays{$name} = shared_clone([$to_store->dims]);
 			$types{$name} = $to_store->get_datatype;
@@ -475,6 +495,12 @@ necessary when using C<mapfraw>. Hopefully that limitation will be lifted
 in forthcoming releases of this module.
 
 =head1 BUGS
+
+Need to document error messages. This bit of test may prove useful for
+slices and other non-physical piddles:
+
+ You can share this piddle by severing it first, or you can
+ share a copy of this piddle
 
 Need to make sure the docs get pulled in by the docs database.
 
