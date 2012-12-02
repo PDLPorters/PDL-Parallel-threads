@@ -289,7 +289,9 @@ This documentation describes version 0.02 of PDL::Parallel::threads.
 
 This module provides a means to share PDL data between different Perl
 threads. In contrast to PDL's posix thread support (see
-L<PDL::ParallelCPU>), this module lets you work with Perl's built-in
+L<PDL::Parallel::CPU>
+or, for older versions of PDL, L<PDL::ParallelCPU>), this module lets you
+work with Perl's built-in
 threading model. In contrast to Perl's L<threads::shared>, this module
 focuses on sharing I<data>, not I<variables>.
 
