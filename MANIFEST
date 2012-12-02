@@ -10,7 +10,7 @@ lib/PDL/Parallel/threads.xs
 lib/PDL/Parallel/threads/SIMD.pm
 MANIFEST			This list of files
 ppport.h
-README.md
+README.pod
 t/00-load.t
 t/01_ref_counting.t
 t/02_non_threaded.t
