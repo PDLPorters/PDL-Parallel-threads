@@ -21,6 +21,7 @@ BEGIN {
 my %datasv_pointers :shared;
 my %dim_arrays :shared;
 my %types :shared;
+my %originating_tid :shared;
 my %file_names :shared;
 
 require Exporter;
@@ -90,6 +91,7 @@ sub share_pdls {
 			}
 			$dim_arrays{$name} = shared_clone([$to_store->dims]);
 			$types{$name} = $to_store->get_datatype;
+			$originating_tid{$name} = threads->tid;
 		}
 		elsif (ref($to_store) eq '') {
 			# A file name, presumably; share via memory mapping
@@ -119,6 +121,8 @@ sub share_pdls {
 	}
 }
 
+
+
 # Frees the memory associated with the given names.
 sub free_pdls {
 	# Keep track of each name that is successfully freed
@@ -133,6 +137,7 @@ sub free_pdls {
 			delete $datasv_pointers{$name};
 			delete $dim_arrays{$name};
 			delete $types{$name};
+			delete $originating_tid{$name};
 			push @removed, $name;
 		}
 		# If it's mmapped, remove the file name
@@ -166,6 +171,12 @@ sub retrieve_pdls {
 		my $name = auto_package_name($short_name);
 		
 		if (exists $datasv_pointers{$name}) {
+			# Make sure that the originating thread still exists, or the
+			# data will be gone.
+			eval { threads->object($originating_tid{$name}) }
+				or croak("retrieve_pdls: '$name' was created in a thread that "
+				. " is no longer available");
+			
 			# Create the new thinly wrapped piddle
 			my $new_piddle = _new_piddle_around($datasv_pointers{$name});
 			$new_piddle->set_datatype($types{$name});  # set datatype
@@ -290,8 +301,8 @@ later to retrieve the data with the C<retrieve_pdls>. Once your thread has
 access to the piddle data, any modifications will operate directly on the
 shared memory, which is exactly what shared data is supposed to do. When you
 are completely done using a piece of data, you need to explicitly remove the
-data from the shared pool with the C<free_pdls> function. Otherwise you have
-a memory leak.
+data from the shared pool with the C<free_pdls> function. Otherwise your
+data will continue to consume memory until the originating thread terminates.
 
 This module lets you share two sorts of piddle data. You can share data for
 a piddle that is based on actual I<physical memory>, such as the result of
