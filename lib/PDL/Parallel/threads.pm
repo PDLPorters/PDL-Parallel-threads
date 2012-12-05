@@ -173,9 +173,12 @@ sub retrieve_pdls {
 		if (exists $datasv_pointers{$name}) {
 			# Make sure that the originating thread still exists, or the
 			# data will be gone.
-			eval { threads->object($originating_tid{$name}) }
-				or croak("retrieve_pdls: '$name' was created in a thread that "
-				. " is no longer available");
+			if ($originating_tid{$name} > 0
+				and not defined (threads->object($originating_tid{$name}))
+			) {
+				croak("retrieve_pdls: '$name' was created in a thread that "
+				. "is no longer available");
+			}
 			
 			# Create the new thinly wrapped piddle
 			my $new_piddle = _new_piddle_around($datasv_pointers{$name});
