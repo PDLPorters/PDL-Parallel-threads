@@ -11,6 +11,9 @@ use PDL::IO::FastRaw;
 mapfraw('foo.dat', {Creat => 1, Dims => [$N_threads], Datatype => double})
 	->share_as('mapped');
 
+print "Main thread is about to rest for 5 seconds\n";
+sleep 5;
+
 launch_simd($N_threads, sub {
 	my $tid = shift;
 	my ($piddle, $mapped) = retrieve_pdls('test', 'mapped');
