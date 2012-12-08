@@ -430,13 +430,11 @@ C<PDL::Parallel::threads>, namespace clashes are highly unlikely to occur
 as long as you (and the author of that other module) use simple names,
 like the sort of thing that works for variable names.
 
-=head1 FUNCTIONS AND METHODS
+=head1 FUNCTIONS
 
 This module provides three stand-alone functions and adds one new PDL method.
 
-=over
-
-=item share_pdls (name => piddle|filename, name => piddle|filename, ...)
+=head2 share_pdls (name => piddle|filename, name => piddle|filename, ...)
 
 This function takes key/value pairs where the value is the piddle to store
 or the file name to memory map, and the key is the name under which to store
@@ -464,7 +462,7 @@ collection of shared memory that you may need to use for your algorithm:
      reduction => zeroes(100),
  );
 
-=item piddle->share_as(name)
+=head2 piddle->share_as(name)
 
 This is a PDL method, letting you share directly from any piddle. It does
 the exact same thing as C<shared_pdls>, but it's invocation is a little
@@ -487,7 +485,7 @@ individual piddles:
 
  $something->where($foo < bar)->share_as('troubling');
 
-=item retrieve_pdls (name, name, ...)
+=head2 retrieve_pdls (name, name, ...)
 
 This function takes a list of names and returns a list of piddles that use
 the shared data. In scalar context the function returns the piddle
@@ -502,7 +500,7 @@ say something differently.
  my @both_piddles = retrieve_pdls('foo', 'bar');
  my ($foo, $bar) = retrieve_pdls('foo', 'bar');
 
-=item free_pdls(name, name, ...)
+=head2 free_pdls(name, name, ...)
 
 This function marks the memory associated with the given names as no longer
 being shared, handling all reference counting and other low-level stuff.
@@ -524,8 +522,6 @@ can handle trouble with perl C<grep>s and other conditionals:
  if (not $results[2]) {
      print "Couldn't remove name3 for some reason\n";
  }
-
-=back
 
 =head1 DIAGNOSTICS
 
@@ -662,19 +658,13 @@ in forthcoming releases of this module.
 
 =head1 BUGS
 
-Need to document error messages. This bit of test may prove useful for
-slices and other non-physical piddles:
-
- You can share this piddle by severing it first, or you can
- share a copy of this piddle
-
 Need to make sure the docs get pulled in by the docs database.
 
 Need to write the test suite.
 
 =head1 SEE ALSO
 
-L<PDL::ParallelCPU>, L<MPI>, L<PDL::Parallel::MPI>, L<OpenCL>, L<threads>,
+L<PDL::Parallel::CPU>, L<MPI>, L<PDL::Parallel::MPI>, L<OpenCL>, L<threads>,
 L<threads::shared>
 
 =head1 AUTHOR, COPYRIGHT, LICENSE
