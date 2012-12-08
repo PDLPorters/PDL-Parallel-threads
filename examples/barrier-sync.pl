@@ -4,7 +4,7 @@ use warnings;
 use PDL;
 use PDL::NiceSlice;
 use PDL::Parallel::threads qw(retrieve_pdls);
-use PDL::Parallel::threads::SIMD qw(barrier_sync launch_simd);
+use PDL::Parallel::threads::SIMD qw(parallelize parallel_sync parallel_id);
 my $piddle = zeroes(20);
 $piddle->share_as('test');
 #undef($piddle);
@@ -18,41 +18,46 @@ use PDL::IO::FastRaw;
 my $mmap = mapfraw('foo.bin', {Creat => 1, Datatype => double, Dims => [50]});
 $mmap->share_as('mmap');
 
+END {
+	unlink 'foo.bin';
+	unlink 'foo.bin.hdr';
+}
+
 my $N_threads = 5;
 
-launch_simd($N_threads, sub {
-	my $tid = shift;
+parallelize {
+	my $tid = parallel_id;
 	my $piddle = retrieve_pdls('test');
 	
 	print "Thread id $tid says the piddle is $piddle\n";
-	barrier_sync;
+	parallel_sync;
 
 	my $N_data_to_fix = $piddle->nelem / $N_threads;
 	my $idx = sequence($N_data_to_fix) * $N_threads + $tid;
 	$piddle($idx) .= $tid;
-	barrier_sync;
+	parallel_sync;
 	
 	print "After set, thread id $tid says the piddle is $piddle\n";
-	barrier_sync;
+	parallel_sync;
 	
 	$piddle->set($tid, 0);
-	barrier_sync;
+	parallel_sync;
 	
 	print "Thread id $tid says the piddle is now $piddle\n";
-});
+} $N_threads;
 
 print "mmap is $mmap\n";
-launch_simd($N_threads, sub {
-	my $tid = shift;
+parallelize {
+	my $tid = parallel_id;
 	my $mmap = retrieve_pdls('mmap');
 	
 	$mmap($tid) .= $tid;
-});
+} $N_threads;
 
 print "now mmap is $mmap\n";
 
-launch_simd($N_threads, sub {
-	my $tid = shift;
+parallelize {
+	my $tid = parallel_id;
 	my $piddle = retrieve_pdls('test');
 	
 	print "Thread id is $tid\n";
@@ -64,6 +69,6 @@ launch_simd($N_threads, sub {
 	
 	my $slice = retrieve_pdls('slice');
 	$slice($tid) .= -10 * $tid;
-});
+} $N_threads;
 
 print "Final piddle value is $piddle\n";
