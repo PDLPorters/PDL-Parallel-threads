@@ -57,7 +57,11 @@ _get_and_mark_datasv_pointer (piddle)
 		RETVAL
 
 
-# Creates a new piddle with the given datasv and type
+# Given a pointer value that was retrieved with _get_and_mark_datasv_pointer,
+# this method creates a new piddle and sets the piddle's datasv to the
+# provided location. Combined with proper dim/datatype munging after this
+# method is called, as well as the proper flag setting, makes the piddle a
+# very thin clone of the original piddle.
 pdl *
 _new_piddle_around (datasv_pointer)
 	size_t datasv_pointer
@@ -88,28 +92,6 @@ _update_piddle_data_state_flags (piddle)
 	CODE:
 		/* Tell the piddle that it doesn't really own the data... */
 		piddle->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
-
-# Given a null piddle and a pointer value that was retrieved with
-# _get_and_mark_datasv_pointer, this method sets the piddle's datasv to the
-# provided location. This (combined with proper dim/datatype munging before
-# this method is called) makes the piddle a very thin clone of the original
-# piddle.
-void
-_wrap_piddle_around (piddle, datasv_pointer)
-	pdl * piddle
-	size_t datasv_pointer
-	CODE:
-		/* set the datasv to what was supplied */
-		piddle->datasv = (void*) datasv_pointer;
-		piddle->data = (void*) SvPV_nolen((SV*)(datasv_pointer));
-		
-		/* Tell the piddle that it doesn't really own the data... */
-		piddle->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
-		PDL->add_deletedata_magic(piddle, default_magic, 0);
-		
-		/* ... but increment the SV's reference count so the data persistents
-		 * as long as this piddle is around. */
-		SvREFCNT_inc((SV*)(piddle->datasv));
 
 # Needed in the data removal section
 void
