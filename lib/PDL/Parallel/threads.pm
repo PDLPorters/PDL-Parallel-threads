@@ -34,7 +34,7 @@ sub PDL::CLONE_SKIP { 1 }
 sub auto_package_name {
 	my $name = shift;
 	my ($package_name) = caller(1);
-	$name = join('::', $package_name, $name) if $name =~ /^\w+$/;
+	$name = "$package_name/$name" if $name =~ /^\w+$/;
 	return $name;
 }
 
@@ -271,23 +271,22 @@ This documentation describes version 0.02 of PDL::Parallel::threads.
 
 This module provides a means to share PDL data between different Perl
 threads. In contrast to PDL's posix thread support (see
-L<PDL::Parallel::CPU>
-or, for older versions of PDL, L<PDL::ParallelCPU>), this module lets you
-work with Perl's built-in
-threading model. In contrast to Perl's L<threads::shared>, this module
-focuses on sharing I<data>, not I<variables>.
+L<PDL::Parallel::CPU> or, for older versions of PDL, L<PDL::ParallelCPU>),
+this module lets you work with Perl's built-in threading model. In contrast
+to Perl's L<threads::shared>, this module focuses on sharing I<data>, not
+I<variables>.
 
 Because this module focuses on sharing data, not variables, it does not use
 attributes to mark shared variables. Instead, you must explicitly share your
 data by using the C<share_pdls> function or C<share_as> PDL method that this
 module introduces. Those both associate a name with your data, which you use
-later to retrieve the data with the C<retrieve_pdls>. Once your thread has
-access to the piddle data, any modifications will operate directly on the
-shared memory, which is exactly what shared data is supposed to do. When you
-are completely done using a piece of data, you need to explicitly remove the
-data from the shared pool with the C<free_pdls> function. Otherwise your
-data will continue to consume memory until the originating thread terminates,
-or put differently, you will have a memory leak.
+in other threads to retrieve the data with the C<retrieve_pdls>. Once your
+thread has access to the piddle data, any modifications will operate directly
+on the shared memory, which is exactly what shared data is supposed to do.
+When you are completely done using a piece of data, you need to explicitly
+remove the data from the shared pool with the C<free_pdls> function.
+Otherwise your data will continue to consume memory until the originating
+thread terminates, or put differently, you will have a memory leak.
 
 This module lets you share two sorts of piddle data. You can share data for
 a piddle that is based on actual I<physical memory>, such as the result of
@@ -305,7 +304,6 @@ that you can safey share.
 
 The mechanism by which this module achieves data sharing of physical memory
 is remarkably cheap. It's even cheaper then a simple affine transformation.
-It is so cheap, in fact, that it does not work for all kinds of PDL data:
 The sharing works by creating a new shell of a piddle for each call to 
 C<retrieve_pdls> and setting that piddle's memory structure to point back to
 the same locations of the original (shared) piddle. This means that you can
@@ -350,7 +348,8 @@ future the module may perform more internal tweaks to L<PDL::IO::FastRaw> to
 store whatever options were used to create the original piddle. But for the
 meantime, be sure that you have a header file for your raw data file.
 
-There is much less nuance to sharing memory mapped data across threads. When
+There is much less nuance to sharing memory mapped data across threads
+compared to directly sharing physical memory as discussed above. When
 you ask for a thread-local copy of that file, you get your very own fully
 baked memory-mapped piddle that gets freed when the piddle goes out of scope.
 This means you cannot get memory leaks. Furthermore, the data underlying the
@@ -381,8 +380,8 @@ plenty of room for developers using this module to choose the same name for
 their data. Without some combination of discipline and help, it would be
 easy for shared memory names to clash. One solution to this would be to
 require users (i.e. you) to choose names that include thier current package,
-such as C<My-Module-workspace> or (even better in my opinion)
-C<My::Module::workspace> instead of just C<workspace>. This is sometimes
+such as C<My-Module-workspace> or, following L<perlpragma>,
+C<My::Module/workspace> instead of just C<workspace>. This is sometimes
 called name mangling. Well, I decided that this is such a good idea that
 C<PDL::Parallel::threads> does the second form of name mangling for you
 automatically! Of course, you can opt out, if you wish.
@@ -398,11 +397,11 @@ names matching C</^\w+$/>. Here's an example demonstrating how this works:
  # Stored under '??foo'
  sequence(20)->share_as('??foo');
  
- # Shared as 'Some::Package::foo'
+ # Shared as 'Some::Package/foo'
  zeroes(100)->share_as('foo');
  
  sub do_something {
-   # Retrieve 'Some::Package::foo'
+   # Retrieve 'Some::Package/foo'
    my $copy_of_foo = retrieve_pdls('foo');
    
    # Retrieve '??foo':
@@ -416,8 +415,8 @@ names matching C</^\w+$/>. Here's an example demonstrating how this works:
  use PDL::Parallel::threads 'retrieve_pdls';
  
  sub something_else {
-   # Retrieve 'Some::Package::foo'
-   my $copy_of_foo = retrieve_pdls('Some::Package::foo');
+   # Retrieve 'Some::Package/foo'
+   my $copy_of_foo = retrieve_pdls('Some::Package/foo');
    
    # Retrieve '??foo':
    my $copy_of_weird_foo = retrieve_pdls('??foo');
