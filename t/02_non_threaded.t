@@ -16,7 +16,7 @@ use PDL::Parallel::threads qw(retrieve_pdls);
 # Create some memory with some irrational values. The goal here is to
 # perform a strict comparison between floating point values that have
 # something nontrivial across all its bits.
-my $data = sequence(10)->sqrt->share_as('Test::Set1');
+my $data = (sequence(10)+1)->sqrt->share_as('Test::Set1');
 my $to_compare = $data;
 ok(all($to_compare == $data), 'A piddle exactly equals itself')
 	or diag("Original is $data and comparison is $to_compare;\n"
@@ -28,7 +28,7 @@ is_deeply([$to_compare->dims], [$data->dims], 'Retrieved dims is correct')
 	or diag("Original dims are " . join(', ', $data->dims)
 		. " and retrieved dims are " . join', ', $to_compare->dims);
 
-ok($data->type == $to_compare->type, 'Retrieved typs is correct')
+ok($data->type == $to_compare->type, 'Retrieved type is correct')
 	or diag("Original type is " . $data->type 
 		. " and retrieved type is " . $to_compare->type);
 
@@ -36,9 +36,9 @@ ok(all($to_compare == $data), 'Retrieved value exactly equals original')
 	or diag("Original is $data and retrieved is $to_compare;\n"
 		. "original - retrieved = " . ($data - $to_compare));
 
-##########################
-# Shared modifications 2 #
-##########################
+###########################
+# Shared modifications: 2 #
+###########################
 
 use PDL::NiceSlice;
 # Modify the original, see if it is reflected in the retrieved copy

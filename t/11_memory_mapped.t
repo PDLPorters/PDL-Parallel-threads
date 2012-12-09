@@ -18,7 +18,7 @@ use PDL::NiceSlice;
 threads->create(sub {
 	my $tid = shift;
 	my $workspace = retrieve_pdls('workspace');
-	$workspace($tid) .= sqrt($tid);
+	$workspace($tid) .= sqrt($tid + 1);
 }, $_) for 0..$N_threads-1;
 
 # Reap the threads
@@ -26,7 +26,7 @@ for my $thr (threads->list) {
 	$thr->join;
 }
 
-my $expected = sequence($N_threads)->sqrt;
+my $expected = (sequence($N_threads) + 1)->sqrt;
 my $workspace = retrieve_pdls('workspace');
 ok(all($expected == $workspace), 'Sharing memory mapped piddles works');
 
