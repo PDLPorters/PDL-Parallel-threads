@@ -267,6 +267,32 @@ This documentation describes version 0.02 of PDL::Parallel::threads.
  print "First ten elements of test_data are ",
      $test_data(0:9), "\n";
 
+=head1 MAJOR WARNING FOR AN OTHERWISE GREAT MODULE
+
+In the process of writing my tests, I discovered that sometimes the first
+and possibly the second element of a shared piddle can get flubbed up. I
+have looked into this at some depth and have not managed to pick apart what
+is going on---I have not found any mistakes in PDL or my module (yet). I
+have, however, managed to write tests that verify exactly which elements are
+vulnerable for different array types, and these are my findings:
+
+ Type      First N Unsafe
+ byte          0 (all are ok)
+ short	       2
+ ushort        2
+ long          2
+ longlong      2
+ float         1
+ double        1
+
+This means that if you need a workspace with 20 double floating-point values,
+you would do best to allocate 21 spaces, and work in the range (1:20) rather
+than (0:19).
+
+These numbers are explicitly tested in the test suite, so you can be assured
+that if this module installed, you need not worry about any extra mischeif
+except for these documented offsets.
+
 =head1 DESCRIPTION
 
 This module provides a means to share PDL data between different Perl
@@ -478,11 +504,20 @@ different:
  $data1->share_as('foo');
  $data2->share_as('bar');
 
-There's More Than One Way To Do It, because it can make for easier-to-read
-code. In general I recommend using the C<share_as> method for sharing
-individual piddles:
+Like many other PDL methods, this method returns the just-shared piddle.
+This can lead to some amusing ways of storing partial calculations partway
+through a long chain:
 
- $something->where($foo < bar)->share_as('troubling');
+ my $results = $input->sumover->share_as('pre_offset') + $offset;
+ 
+ # Now you can get the result of the sumover operation
+ # before that offset was added, by calling:
+ my $pre_offset = retrieve_pdls('pre_offset');
+
+This function achieves the same end as L</share_pdls>: There's More Than One
+Way To Do It, because it can make for easier-to-read code. In general I
+recommend using the C<share_as> method when you only need to share a single
+piddle memory space.
 
 =head2 retrieve_pdls (name, name, ...)
 

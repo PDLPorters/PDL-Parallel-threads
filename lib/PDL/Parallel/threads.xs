@@ -114,6 +114,22 @@ __get_pdl_datasv_ref_count (piddle)
 	OUTPUT:
 		RETVAL
 
+# Super-internal function, used for debugging the zero-offset problem.
+int
+__pdl_datasv_pv_is_data (piddle)
+	pdl * piddle
+	CODE:
+		/* get the datasv and data pointers */
+		void * datasv_pointer = (void*) piddle->datasv;
+		if (piddle->data == (void*) SvPV_nolen((SV*)(datasv_pointer))) {
+			RETVAL = 1;	
+		}
+		else {
+			RETVAL = 0;
+		}
+	OUTPUT:
+		RETVAL
+
 BOOT:
 	perl_require_pv("PDL::Core");
 	CoreSV = perl_get_sv("PDL::SHARE",FALSE);
