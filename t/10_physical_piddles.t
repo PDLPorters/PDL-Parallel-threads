@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 use Test::More;
+use Test::Exception;
 
 use PDL;
 use PDL::Parallel::threads qw(retrieve_pdls);
@@ -80,7 +81,8 @@ is_deeply(\@success, \@expected, 'All threads changed their local values');
 # Do the results of all but the zeroeth element agree with what we expect?
 
 # Something gets messed up near the beginning of the data arrays when data
-# are shared. These tests verify the documented "unsafe" offsets.
+# are shared. These tests verify the documented "unsafe" offsets. Note that
+# when these get fixed, be sure to update the slice offsets in test 30.
 
 my %n_bad_offsets_for = (
 	c => 0,
@@ -128,13 +130,16 @@ for my $type_letter (keys %workspaces) {
 
 # Test what happens when we try to share a slice
 my $slice = $workspaces{d}->(11:20);
-eval { $slice->share_as('slice') };
-isnt($@, '', 'Sharing a slice croaks');
+throws_ok {
+	$slice->share_as('slice');
+} qr/share_pdls: Could not share a piddle under.*because the piddle is a slice/
+, 'Sharing a slice croaks';
 
 my $rotation = $workspaces{d}->rotate(5);
-eval { $rotation->share_as('rotation') };
-isnt($@, '', 'Sharing a rotation (slice) croaks');
-
+throws_ok {
+	$rotation->share_as('rotation')
+} qr/share_pdls: Could not share a piddle under.*because the piddle is a slice/
+, 'Sharing a rotation (slice) croaks';
 
 
 done_testing();

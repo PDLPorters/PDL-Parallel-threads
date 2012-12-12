@@ -25,6 +25,7 @@ my $build = Module::Build->new(
 		'ExtUtils::ParseXS'	=> '3.0',
 		# Needed for warning testing
 		'Test::Warn' => 0,
+		'Test::Exception' => 0,
 	},
 	requires => {
 		# Due to the use of PerlIO, I need at least 5.8:

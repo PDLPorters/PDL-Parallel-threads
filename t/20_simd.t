@@ -25,6 +25,7 @@ warning_is {
 my @after_first_block : shared;
 my @after_second_block : shared;
 my @pids : shared;
+my @recursive_simd_allowed : shared;
 
 my @workspace : shared;
 
@@ -59,10 +60,23 @@ parallelize {
 	$pid_to_check = 0 if $pid_to_check == $N_threads;
 	$after_second_block[$pid] = 1;
 	$after_second_block[$pid] = 0 if $workspace[$pid] != -$pid_to_check;
+	
+	# Check recursive parallelized block
+	eval {
+		parallelize {
+			my $a = 1;
+		} 5;
+		$recursive_simd_allowed[$pid] = 1;
+	} or do {
+		$recursive_simd_allowed[$pid] = 0;
+	};
+	
 } $N_threads;
 
 my @expected = (1) x $N_threads;
 is_deeply(\@after_first_block, \@expected, 'First barrier synchronization works');
 is_deeply(\@after_second_block, \@expected, 'Second barrier synchronization works');
+@expected = (0) x $N_threads;
+is_deeply(\@recursive_simd_allowed, \@expected, 'Recursive paralleliztion not (yet) allowed');
 
 done_testing;
