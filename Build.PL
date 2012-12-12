@@ -23,6 +23,8 @@ my $build = Module::Build->new(
 		# working here - I need to check the smoke reports to hone in on a
 		# minimum required version:
 		'ExtUtils::ParseXS'	=> '3.0',
+		# Needed for warning testing
+		'Test::Warn' => 0,
 	},
 	requires => {
 		# Due to the use of PerlIO, I need at least 5.8:

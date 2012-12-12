@@ -55,7 +55,6 @@ sub parallel_id () {
 
 sub get_tid {
 	carp("Cannot get parallel_id outside of a parallelized block");
-	return;
 }
 
 ##################
