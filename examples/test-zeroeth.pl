@@ -27,11 +27,6 @@ parallelize {
 		my $workspace = retrieve_pdls("workspace_$type_letter");
 		my $type = $workspace->type;
 		
-		# Make sure that this thread's data pointer points exactly to the
-		# PV part of the piddle's datasv
-		PDL::Parallel::threads::__pdl_datasv_pv_is_data($workspace)
-			or print "Thread $pid, type $type: datasv's pv is not data\n";
-		
 		# Have this thread touch one of the values, and have it double-check
 		# that the value is correctly set
 		$workspace($pid+1) .= sqrt($pid + 1);

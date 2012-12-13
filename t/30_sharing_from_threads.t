@@ -38,7 +38,7 @@ parallelize {
 		$could_get_data[$pid] = 1;
 		
 		# Make sure it's what we expected
-		$data_is_correct[$pid] = all($to_test->slice("1:-1") == $thread_to_grab)
+		$data_is_correct[$pid] = all($to_test == $thread_to_grab)
 			or diag("For thread $pid, expected ${thread_to_grab}s but got $to_test");
 		
 		1;

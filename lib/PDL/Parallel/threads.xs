@@ -63,8 +63,9 @@ _get_and_mark_datasv_pointer (piddle)
 # method is called, as well as the proper flag setting, makes the piddle a
 # very thin clone of the original piddle.
 pdl *
-_new_piddle_around (datasv_pointer)
+_new_piddle_around (datasv_pointer, datatype)
 	size_t datasv_pointer
+	int datatype
 	CODE:
 		/* Create a new piddle container */
 		pdl * piddle = PDL->pdlnew();
@@ -72,6 +73,10 @@ _new_piddle_around (datasv_pointer)
 		/* set the datasv to what was supplied */
 		piddle->datasv = (void*) datasv_pointer;
 		piddle->data = (void*) SvPV_nolen((SV*)(datasv_pointer));
+		
+		/* Set the datatype to that supplied */
+		piddle->datatype = datatype;
+
 		
 		/* Tell the piddle that it doesn't really own the data... */
 		PDL->add_deletedata_magic(piddle, default_magic, 0);
@@ -110,22 +115,6 @@ __get_pdl_datasv_ref_count (piddle)
 		}
 		else {
 			RETVAL = SvREFCNT((SV*)(piddle->datasv));
-		}
-	OUTPUT:
-		RETVAL
-
-# Super-internal function, used for debugging the zero-offset problem.
-int
-__pdl_datasv_pv_is_data (piddle)
-	pdl * piddle
-	CODE:
-		/* get the datasv and data pointers */
-		void * datasv_pointer = (void*) piddle->datasv;
-		if (piddle->data == (void*) SvPV_nolen((SV*)(datasv_pointer))) {
-			RETVAL = 1;	
-		}
-		else {
-			RETVAL = 0;
 		}
 	OUTPUT:
 		RETVAL

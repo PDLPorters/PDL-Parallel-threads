@@ -160,8 +160,8 @@ sub retrieve_pdls {
 			}
 			
 			# Create the new thinly wrapped piddle
-			my $new_piddle = _new_piddle_around($datasv_pointers{$name});
-			$new_piddle->set_datatype($types{$name});  # set datatype
+			my $new_piddle = _new_piddle_around($datasv_pointers{$name},
+				$types{$name});
 			
 			# Set the dimensions
 			my @dims = @{$dim_arrays{$name}};
@@ -266,32 +266,6 @@ This documentation describes version 0.02 of PDL::Parallel::threads.
  use PDL::NiceSlice;
  print "First ten elements of test_data are ",
      $test_data(0:9), "\n";
-
-=head1 MAJOR WARNING FOR AN OTHERWISE GREAT MODULE
-
-In the process of writing my tests, I discovered that sometimes the first
-and possibly the second element of a shared piddle can get flubbed up. I
-have looked into this at some depth and have not managed to pick apart what
-is going on---I have not found any mistakes in PDL or my module (yet). I
-have, however, managed to write tests that verify exactly which elements are
-vulnerable for different array types, and these are my findings:
-
- Type      First N Unsafe
- byte          0 (all are ok)
- short	       2
- ushort        2
- long          2
- longlong      2
- float         1
- double        1
-
-This means that if you need a workspace with 20 double floating-point values,
-you would do best to allocate 21 spaces, and work in the range (1:20) rather
-than (0:19).
-
-These numbers are explicitly tested in the test suite, so you can be assured
-that if this module installed, you need not worry about any extra mischeif
-except for these documented offsets.
 
 =head1 DESCRIPTION
 
@@ -692,9 +666,9 @@ in forthcoming releases of this module.
 
 =head1 BUGS
 
-Need to make sure the docs get pulled in by the docs database.
-
-Need to write the test suite.
+None known at this point, although I need to make sure the docs get pulled
+in by the PDL docs database, so I have a little bit of documentation work
+left before I can upload to PrePAN or CPAN.
 
 =head1 SEE ALSO
 
