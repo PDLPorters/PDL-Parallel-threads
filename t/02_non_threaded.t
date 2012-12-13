@@ -43,7 +43,7 @@ ok(all($to_compare == $data), 'Retrieved value exactly equals original')
 use PDL::NiceSlice;
 # Modify the original, see if it is reflected in the retrieved copy
 $data(3) .= -10;
-ok(all($to_compare == $data), 'Modification to main is reflected in retrieved')
+ok(all($to_compare == $data), 'Modification to original is reflected in retrieved')
 	or diag("Original is $data and retrieved is $to_compare;\n"
 		. "original - retrieved = " . ($data - $to_compare));
 
@@ -56,7 +56,7 @@ ok(all($to_compare == $data), 'Modification to retrieved is reflected in origina
 # Undefine doesn't destroy: 3 #
 ###############################
 
-my $expected = pdl(0, -10, -50);  # These need to line up with the
+my $expected = pdl(1, -10, -50);  # These need to line up with the
 my $idx = pdl(0, 3, 8);           # indices and values used/set above
 
 undef($to_compare);
