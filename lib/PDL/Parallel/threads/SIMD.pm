@@ -478,6 +478,10 @@ I'm sure there are plenty of limitations, but it's hard for me to see what
 differentiates a design goal from a limitation. Feedback on this would be
 much appreciated.
 
+=head1 BUGS
+
+None known at this point.
+
 =head1 SEE ALSO
 
 The basic module for Perl parallel computing is L<threads>.
@@ -499,12 +503,6 @@ L<Thread::Pool>.
 This module was written by David Mertens. The documentation is copyright (C)
 David Mertens, 2012. The source code is copyright (C) Northwestern University,
 2012. All rights reserved.
-
-=head1 LICENSE AND COPYRIGHT
-
-Documentation copyright (c) 2012, David Mertens. All rights reserved.
-
-Code copyright (c) 2012, Northwestern University. All rights reserved.
 
 This module is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

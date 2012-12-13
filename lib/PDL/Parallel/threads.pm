@@ -294,12 +294,12 @@ L<PDL::Core/zeroes>. You can also share data using I<memory mapped> files.
 (Note: PDL v2.4.11 and higher support memory mapped piddles on all major
 platforms, including Windows.) There are other sorts of piddles whose data
 you cannot share. You cannot directly share slices (though a simple 
-L<PDL::Core/sever> or L<PDL::Core/copy> command will give you a
+L<PDL::Core/sever> or L<PDL::Core/copy> will give you a
 piddle based on physical memory that you can share). Also, certain functions
 wrap external data into piddles so you can manipulate them with PDL methods.
 For example, see L<PDL::Graphics::PLplot/plmap> and
 L<PDL::Graphics::PLplot/plmeridians>. These you cannot share directly, but
-making a physical copy with PDL's L<PDL::Core/copy> method will give you
+making a physical copy with L<PDL::Core/copy> will give you
 something that you can safey share.
 
 =head2 Physical Memory
@@ -523,7 +523,7 @@ C<share_as> does not pay attention to bad values. There is no technical
 reason for this: it simply hadn't occurred to me until I had to write the
 bad-data documentation. Expect it to happen in a forthcoming release. :-)
 
-=head2 retrieve_pdls (name, name, ...)
+=head2 retrieve_pdls
 
 =for ref
 
@@ -640,7 +640,7 @@ you know what's going on if you get this. :-)
 
 =back
 
-=item When share_pdls gets a scalar, it expects that to be a file to share
+=item C<< When share_pdls gets a scalar, it expects that to be a file to share
 as memory mapped data. For key '$name', '$to_store' was given, but ... >>
 
 =over
@@ -724,9 +724,7 @@ in forthcoming releases of this module.
 
 =head1 BUGS
 
-None known at this point, although I need to make sure the docs get pulled
-in by the PDL docs database, so I have a little bit of documentation work
-left before I can upload to PrePAN or CPAN.
+None known at this point.
 
 =head1 SEE ALSO
 
@@ -740,6 +738,32 @@ David Mertens, 2012. The source code is copyright (C) Northwestern University,
 2012. All rights reserved.
 
 This module is distributed under the same terms as Perl itself.
+
+=head1 DISCLAIMER OF WARRANTY
+
+Parallel computing is hard to get right, and it can be exacerbated by errors
+in the underlying software. Please do not use this software in anything that
+is mission-critical unless you have tested and verified it yourself. I cannot
+guarantee that it will perform perfectly under all loads. I hope this is
+useful and I wish you well in your usage thereof, but BECAUSE THIS SOFTWARE
+IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY FOR THE SOFTWARE, TO THE
+EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN OTHERWISE STATED IN WRITING
+THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES PROVIDE THE SOFTWARE "AS IS"
+WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT
+NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE
+SOFTWARE IS WITH YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE
+COST OF ALL NECESSARY SERVICING, REPAIR, OR CORRECTION.
+
+IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING WILL
+ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR REDISTRIBUTE
+THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE LIABLE TO YOU FOR DAMAGES,
+INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING
+OUT OF THE USE OR INABILITY TO USE THE SOFTWARE (INCLUDING BUT NOT LIMITED
+TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU
+OR THIRD PARTIES OR A FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER
+SOFTWARE), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGES.
 
 =cut
 
