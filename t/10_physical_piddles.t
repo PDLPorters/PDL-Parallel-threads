@@ -44,6 +44,13 @@ my %workspaces = (
 	d => sequence($N_threads, 2)->share_as('workspace_d'),
 );
 
+# Remove longlong if Perl doesn't like longlong types
+eval {
+	pack('q*', 10);
+} or do {
+	delete $workspaces{q};
+};
+
 ###############################################
 # Spawn a bunch of threads that work together #
 ###############################################
