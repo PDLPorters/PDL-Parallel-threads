@@ -369,29 +369,71 @@ that block: a function for synchronizing the execution of the different
 threads executing that block and a function to obtain the parallel block's
 sequential id.
 
-=head2 parallelize BLOCK N_THREADS
+=head2 parallelize
 
-Requires two arguments: the block to execute and the number of threads to
-launch to execute this block, and returns nothing. This is the means by
-which you specify the code that you want run in parallel.
+=for ref
+
+Launches a block of code in parallel across a bunch of threads.
+
+=for usage
+
+  parallelize BLOCK N_THREADS
+
+This function requires two arguments: the block to execute and the number of
+threads to launch to execute this block, and returns nothing. This is the
+means by which you specify the code that you want run in parallel.
 
 =head2 parallel_sync
 
-No arguments, no return value. Enforces barrier synchronization among all
-the threads in your parallelized block.
+=for ref
 
-The barrier synchronization is tightly coupled with the C<parallelize>
+Synchronizes all threads at the given barrier.
+
+Usage:
+
+=for usage
+
+  parallelize {
+    # ...
+    
+    parallel_sync;
+    
+    # ...
+    
+  } $N_threads;
+
+This function enforces barrier synchronization among all the threads in your
+parallelized block. It takes no arguments and does not return anything.
+
+The barrier synchronization is tightly coupled with the L</parallelize>
 function: you can only call C<parallel_sync> from the middle of a
-C<parallelize> block. If you call C<parallel_sync> from outside a
-C<parallelize> block, you will get an error.
+L</parallelize> block. If you call C<parallel_sync> from outside a
+L</parallelize> block, you will get an error.
 
 I need to include an example and exposition on when and why to synchronize...
 
 =head2 parallel_id
 
-From within the C<parallelize> block, you obtain the current thread's
+=for ref
+
+Gives the thread's I<parallel id>.
+
+Usage:
+
+=for usage
+
+  parallelize {
+    # ...
+    
+    my $pid = parallel_id;
+    
+    # ...
+    
+  } $N_threads;
+
+From within the L</parallelize> block, you obtain the current thread's
 parallel id with this simple function. When called outside the scope of a
-C<parallelize> block, the function simply croaks.
+L</parallelize> block, the function simply croaks.
 
 =head1 DIAGNOSTICS
 

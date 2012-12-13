@@ -278,39 +278,42 @@ I<variables>.
 
 Because this module focuses on sharing data, not variables, it does not use
 attributes to mark shared variables. Instead, you must explicitly share your
-data by using the C<share_pdls> function or C<share_as> PDL method that this
+data by using the L</share_pdls> function or L</share_as> PDL method that this
 module introduces. Those both associate a name with your data, which you use
-in other threads to retrieve the data with the C<retrieve_pdls>. Once your
+in other threads to retrieve the data with the L</retrieve_pdls>. Once your
 thread has access to the piddle data, any modifications will operate directly
 on the shared memory, which is exactly what shared data is supposed to do.
 When you are completely done using a piece of data, you need to explicitly
-remove the data from the shared pool with the C<free_pdls> function.
+remove the data from the shared pool with the L</free_pdls> function.
 Otherwise your data will continue to consume memory until the originating
 thread terminates, or put differently, you will have a memory leak.
 
 This module lets you share two sorts of piddle data. You can share data for
 a piddle that is based on actual I<physical memory>, such as the result of
-C<zeroes>. You can also share data using I<memory mapped> files. There are
-other sorts of piddles whose data you cannot share. You cannot directly
-share slices (though a simple C<sever> or C<copy> command will give you a
+L<PDL::Core/zeroes>. You can also share data using I<memory mapped> files.
+(Note: PDL v2.4.11 and higher support memory mapped piddles on all major
+platforms, including Windows.) There are other sorts of piddles whose data
+you cannot share. You cannot directly share slices (though a simple 
+L<PDL::Core/sever> or L<PDL::Core/copy> command will give you a
 piddle based on physical memory that you can share). Also, certain functions
 wrap external data into piddles so you can manipulate them with PDL methods.
 For example, see L<PDL::Graphics::PLplot/plmap> and
 L<PDL::Graphics::PLplot/plmeridians>. These you cannot share directly, but
-making a physical copy with PDL's C<copy> method will give you something
-that you can safey share.
+making a physical copy with PDL's L<PDL::Core/copy> method will give you
+something that you can safey share.
 
 =head2 Physical Memory
 
 The mechanism by which this module achieves data sharing of physical memory
 is remarkably cheap. It's even cheaper then a simple affine transformation.
 The sharing works by creating a new shell of a piddle for each call to 
-C<retrieve_pdls> and setting that piddle's memory structure to point back to
+L</retrieve_pdls> and setting that piddle's memory structure to point back to
 the same locations of the original (shared) piddle. This means that you can
-share piddles that are created with standard constructors like C<zeroes>,
-C<pdl>, and C<sequence>, or which are the result of operations and function
-evaluations for which there is no data flow, such as C<cat> (but
-not C<dog>), arithmetic, C<copy>, and C<sever>. When in doubt, C<sever> your
+share piddles that are created with standard constructors like
+L<PDL::Core/zeroes>, L<PDL::Core/pdl>, and L<PDL::Basic/sequence>, or which
+are the result of operations and function evaluations for which there is no
+data flow, such as L<PDL::Core/cat> (but not L<PDL::Core/dog>), arithmetic,
+L<PDL::Core/copy>, and L<PDL::Core/sever>. When in doubt, C<sever> your
 piddle before sharing and everything should work.
 
 There is an important nuance to sharing physical memory: The memory will
@@ -433,7 +436,15 @@ like the sort of thing that works for variable names.
 
 This module provides three stand-alone functions and adds one new PDL method.
 
-=head2 share_pdls (name => piddle|filename, name => piddle|filename, ...)
+=head2 share_pdls
+
+=for ref
+
+Shares piddle data across threads using the given names.
+
+=for usage
+
+  share_pdls (name => piddle|filename, name => piddle|filename, ...)
 
 This function takes key/value pairs where the value is the piddle to store
 or the file name to memory map, and the key is the name under which to store
@@ -461,11 +472,24 @@ collection of shared memory that you may need to use for your algorithm:
      reduction => zeroes(100),
  );
 
-=head2 piddle->share_as(name)
+=for bad
 
-This is a PDL method, letting you share directly from any piddle. It does
-the exact same thing as C<shared_pdls>, but it's invocation is a little
-different:
+C<share_pdls> does not pay attention to bad values. There is no technical
+reason for this: it simply hadn't occurred to me until I had to write the
+bad-data documentation. Expect it to happen in a forthcoming release. :-)
+
+=head2 share_as
+
+=for ref
+
+Method to share a piddle's data across threads under the given name.
+
+=for usage
+
+  piddle->share_as(name)
+
+This PDL method lets you directly share a piddle. It does the exact same
+thing as L</shared_pdls>, but it's invocation is a little different:
 
 =for example
 
@@ -493,14 +517,28 @@ Way To Do It, because it can make for easier-to-read code. In general I
 recommend using the C<share_as> method when you only need to share a single
 piddle memory space.
 
+=for bad
+
+C<share_as> does not pay attention to bad values. There is no technical
+reason for this: it simply hadn't occurred to me until I had to write the
+bad-data documentation. Expect it to happen in a forthcoming release. :-)
+
 =head2 retrieve_pdls (name, name, ...)
 
-This function takes a list of names and returns a list of piddles that use
-the shared data. In scalar context the function returns the piddle
-corresponding with the first named data set, which is usually what you mean
-when you use a single name. If you specify multiple names but call it in
-scalar context, you will get a warning indicating that you probably meant to
-say something differently.
+=for ref
+
+Obtain piddles providing access to the data shared under the given names.
+
+=for usage
+
+  my ($copy1, $copy2, ...) = retrieve_pdls (name, name, ...)
+
+This function takes a list of names and returns a list of piddles that
+provide access to the data shared under those names. In scalar context the
+function returns the piddle corresponding with the first named data set,
+which is usually what you mean when you use a single name. If you specify
+multiple names but call it in scalar context, you will get a warning
+indicating that you probably meant to say something differently.
 
 =for example
 
@@ -508,7 +546,21 @@ say something differently.
  my @both_piddles = retrieve_pdls('foo', 'bar');
  my ($foo, $bar) = retrieve_pdls('foo', 'bar');
 
-=head2 free_pdls(name, name, ...)
+=for bad
+
+C<retrieve_pdls> does not pay attention to bad values. There is no technical
+reason for this: it simply hadn't occurred to me until I had to write the
+bad-data documentation. Expect it to happen in a forthcoming release. :-)
+
+=head2 free_pdls
+
+=for ref
+
+Frees the shared memory (if any) associated with the named shared data.
+
+=for usage
+
+  free_pdls(name, name, ...)
 
 This function marks the memory associated with the given names as no longer
 being shared, handling all reference counting and other low-level stuff.
@@ -530,6 +582,12 @@ can handle trouble with perl C<grep>s and other conditionals:
  if (not $results[2]) {
      print "Couldn't remove name3 for some reason\n";
  }
+
+=for bad
+
+This function simply removes a piddle's memory from the shared pool. It
+does not interact with bad values in any way. But then again, it does not
+interfere with or screw up bad values, either.
 
 =head1 DIAGNOSTICS
 
