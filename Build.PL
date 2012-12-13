@@ -11,7 +11,57 @@ $Config{useithreads}
 my $inc = PDL_INCLUDE;
 $inc =~ s/-I//g;
 
-my $build = Module::Build->new(
+my $class = Module::Build->subclass(
+	class => "Module::Build::Custom",
+	code => q{
+		sub ACTION_install {
+			my $self = shift;
+			
+			# Install the files first
+			$self->SUPER::ACTION_install;
+			
+			##################################
+			# Twiddle with the docs database #
+			##################################
+			
+			use PDL::Doc;
+			use File::Copy qw(copy);
+
+			# Find the pdl documentation
+			my ($dir,$file,$pdldoc);
+
+			DIRECTORY:
+			for my $dir (@INC) {
+				$file = "$dir/PDL/pdldoc.db";
+				if (-f $file) {
+					if (not -w "$dir/PDL") {
+						die "No write permission at $dir/PDL! Not updating docs database.\n";
+					}
+					print "Found docs database $file\n";
+					$pdldoc = new PDL::Doc ($file);
+					last DIRECTORY;
+				}
+			}
+
+			die ("Unable to find docs database! Not updating docs database.\n") unless $pdldoc;
+
+			for my $basedir(@INC) {
+				$dir = "$basedir/PDL/Parallel";
+				if (-d $dir) {
+					$pdldoc->ensuredb();
+					$pdldoc->scantree($dir);
+					eval { $pdldoc->savedb(); };
+					warn $@ if $@;
+
+					print "PDL docs database updated.\n";
+					last;
+				}
+			}
+		}
+	},
+);
+
+my $build = $class->new(
 	module_name => 'PDL::Parallel::threads',
 	license  => 'perl',
 	configure_requires => {
