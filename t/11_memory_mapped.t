@@ -1,17 +1,27 @@
 use strict;
 use warnings;
-
-use Test::More tests => 1;
+use threads;
 
 use PDL;
 use PDL::Parallel::threads qw(retrieve_pdls);
 use PDL::IO::FastRaw;
 
-my $N_threads = 100;
-mapfraw('foo.dat', {Creat => 1, Dims => [$N_threads], Datatype => double})
-	->share_as('workspace');
+use Test::More;
 
-use threads;
+my $N_threads;
+BEGIN {
+	$N_threads = 10;
+	require Test::More;
+	eval {
+		mapfraw('foo.dat', {Creat => 1, Dims => [$N_threads], Datatype => double})
+			->share_as('workspace');
+		Test::More->import(tests => 1);
+		1;
+	} or do {
+		Test::More->import(skip_all => 'Platform does not support memory mapping');
+	};
+}
+
 
 # Spawn a bunch of threads that do the work for us
 use PDL::NiceSlice;
@@ -34,3 +44,5 @@ END {
 	# Clean up the testing files
 	unlink $_ for qw(foo.dat foo.dat.hdr);
 }
+
+done_testing;
