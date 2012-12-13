@@ -8,20 +8,9 @@ use PDL::IO::FastRaw;
 
 use Test::More;
 
-my $N_threads;
-BEGIN {
-	$N_threads = 10;
-	require Test::More;
-	eval {
-		mapfraw('foo.dat', {Creat => 1, Dims => [$N_threads], Datatype => double})
-			->share_as('workspace');
-		Test::More->import(tests => 1);
-		1;
-	} or do {
-		Test::More->import(skip_all => 'Platform does not support memory mapping');
-	};
-}
-
+my $N_threads = 10;
+mapfraw('foo.dat', {Creat => 1, Dims => [$N_threads], Datatype => double})
+		->share_as('workspace');
 
 # Spawn a bunch of threads that do the work for us
 use PDL::NiceSlice;
