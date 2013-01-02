@@ -1,7 +1,15 @@
 use strict;
 use warnings;
-use threads;
 
+BEGIN {
+	use Config;
+	if (! $Config{'useithreads'}) {
+		print("1..0 # Skip: Perl not compiled with 'useithreads'\n");
+		exit(0);
+	}
+}
+
+use threads;
 use PDL;
 use PDL::Parallel::threads qw(retrieve_pdls);
 use PDL::IO::FastRaw;

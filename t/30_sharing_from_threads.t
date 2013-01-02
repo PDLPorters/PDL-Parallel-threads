@@ -1,6 +1,14 @@
 use strict;
 use warnings;
 
+BEGIN {
+	use Config;
+	if (! $Config{'useithreads'}) {
+		print("1..0 # Skip: Perl not compiled with 'useithreads'\n");
+		exit(0);
+	}
+}
+
 # Tests if the threads can create data and share amongst themselves
 
 use Test::More;

@@ -3,11 +3,7 @@ use warnings;
 use Module::Build;
 use PDL::Core::Dev;
 
-use Config;
-$Config{useithreads}
-	or die("Perl must be compiled with ithreads to use PDL::Parallel::threads.\n");
-
-# These are lifted from PDL::Core::Dev, but use a less redundant style:
+# This is lifted from PDL::Core::Dev, but use a less redundant style:
 my $inc = PDL_INCLUDE;
 $inc =~ s/-I//g;
 
