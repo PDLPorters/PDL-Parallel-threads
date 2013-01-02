@@ -9,8 +9,10 @@ use PDL::IO::FastRaw;
 my $can_use_threads;
 BEGIN {
 	$can_use_threads = eval {
-		use threads;
-		use threads::shared;
+		require threads;
+		threads->import();
+		require threads::shared;
+		threads::shared->import();
 		1;
 	};
 	
@@ -74,9 +76,14 @@ sub share_pdls {
 				croak('share_pdls: Could not share a piddle under '
 					. "name '$name' because $error");
 			}
-			$dim_arrays{$name} = shared_clone([$to_store->dims]);
+			if ($can_use_threads) {
+				$dim_arrays{$name} = shared_clone([$to_store->dims]);
+				$originating_tid{$name} = threads->tid;
+			}
+			else {
+				$dim_arrays{$name} = [$to_store->dims];
+			}
 			$types{$name} = $to_store->get_datatype;
-			$originating_tid{$name} = threads->tid if $can_use_threads;
 		}
 		elsif (ref($to_store) eq '') {
 			# A file name, presumably; share via memory mapping
