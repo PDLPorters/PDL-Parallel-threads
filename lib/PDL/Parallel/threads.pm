@@ -16,7 +16,7 @@ BEGIN {
 		1;
 	};
 	
-	our $VERSION = '0.03_01';
+	our $VERSION = '0.03_02';
 	use XSLoader;
 	XSLoader::load 'PDL::Parallel::threads', $VERSION;
 }
