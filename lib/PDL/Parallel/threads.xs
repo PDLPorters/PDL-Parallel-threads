@@ -27,7 +27,7 @@ size_t
 _get_and_mark_datasv_pointer (piddle)
 	pdl * piddle
 	CODE:
-		if (piddle->trans) {
+		if (piddle->trans_parent) {
 			croak("the piddle is a slice.\n"); /* Slice, data flow, etc */
 		}
 		else if (0 == (piddle->state & PDL_ALLOCATED)) {
