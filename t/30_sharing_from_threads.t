@@ -46,11 +46,12 @@ parallelize {
 		$could_get_data[$pid] = 1;
 		
 		# Make sure it's what we expected
-		$data_is_correct[$pid] = all($to_test == $thread_to_grab)
+		$data_is_correct[$pid] = all($to_test == $thread_to_grab)->sclr
 			or diag("For thread $pid, expected ${thread_to_grab}s but got $to_test");
 		
 		1;
 	} or do {
+		diag("data pull for pid $pid failed: $@");
 		$could_get_data[$pid] = 0;
 		$data_is_correct[$pid] = 0;
 	};
@@ -59,9 +60,11 @@ parallelize {
 
 my @expected = (1) x $N_threads;
 is_deeply(\@could_get_data, \@expected,
-	'Threads could access data created by sibbling threads');
+	'Threads could access data created by sibbling threads')
+	or diag("expected all 1s, actually got @could_get_data");
 is_deeply(\@data_is_correct, \@expected,
-	'Data created by sibbling threads worked correctly');
+	'Data created by sibbling threads worked correctly')
+	or diag("expected all 1s, actually got @data_is_correct");
 
 # Make sure the retrieval causes a croak
 for (1..$N_threads-1) {
