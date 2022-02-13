@@ -17,6 +17,13 @@ static void default_magic (pdl *p, size_t pa) {
 	p->data = 0;
 }
 
+/* prior to core version 18, the "trans_parent" field was just called
+ * "trans" so use pre-processor magic to make trans_parent work for
+ * older and newer versions. */
+#if PDL_CORE_VERSION < 18
+	#define trans_parent trans
+#endif
+
 MODULE = PDL::Parallel::threads           PACKAGE = PDL::Parallel::threads
 
 # Integers (which can be cast to and from pointers) are easily shared using
