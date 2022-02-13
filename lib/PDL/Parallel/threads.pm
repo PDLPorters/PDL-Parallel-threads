@@ -16,7 +16,7 @@ BEGIN {
 		1;
 	};
 	
-	our $VERSION = '0.03_02';
+	our $VERSION = '0.04';
 	use XSLoader;
 	XSLoader::load 'PDL::Parallel::threads', $VERSION;
 }
@@ -239,7 +239,7 @@ PDL::Parallel::threads - sharing PDL data between Perl threads
 
 =head1 VERSION
 
-This documentation describes version 0.03 of PDL::Parallel::threads.
+This documentation describes version 0.04 of PDL::Parallel::threads.
 
 =head1 SYNOPSIS
 
