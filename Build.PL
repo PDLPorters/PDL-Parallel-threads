@@ -6,6 +6,7 @@ use PDL::Core::Dev;
 # This is lifted from PDL::Core::Dev, but use a less redundant style:
 my $inc = PDL_INCLUDE;
 $inc =~ s/-I//g;
+$inc =~ s/"//g;
 
 my $class = Module::Build->subclass(
 	class => "Module::Build::Custom",
