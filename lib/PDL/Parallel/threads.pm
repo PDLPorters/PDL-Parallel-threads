@@ -22,7 +22,7 @@ BEGIN {
 }
 
 # These are the means by which we share data across Perl threads. Note that
-# we cannot share piddles directly accross threads, but we can share arrays
+# we cannot share piddles directly across threads, but we can share arrays
 # of scalars, scalars whose integer values are the pointers to piddle data,
 # etc.
 my %datasv_pointers :shared;
