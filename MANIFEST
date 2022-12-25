@@ -8,7 +8,6 @@ examples/test-undef.pl
 threads.pd
 lib/PDL/Parallel/threads/SIMD.pm
 MANIFEST			This list of files
-ppport.h
 README.pod
 t/00-load.t
 t/01_ref_counting.t
