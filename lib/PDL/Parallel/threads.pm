@@ -403,7 +403,7 @@ C<C> programming language will immediately notice that this means there is
 plenty of room for developers using this module to choose the same name for
 their data. Without some combination of discipline and help, it would be
 easy for shared memory names to clash. One solution to this would be to
-require users (i.e. you) to choose names that include thier current package,
+require users (i.e. you) to choose names that include their current package,
 such as C<My-Module-workspace> or, following L<perlpragma>,
 C<My::Module/workspace> instead of just C<workspace>. This is sometimes
 called name mangling. Well, I decided that this is such a good idea that
@@ -694,7 +694,7 @@ store >>
 
 C<share_pdls> only knows how to store memory mapped files and raw data
 piddles. It'll croak if you try to share other kinds of piddles, and it'll
-throw this error if you try to share anythin else, like a hashref.
+throw this error if you try to share anything else, like a hashref.
 
 =item C<< retrieve_pdls: '$name' was created in a thread that has ended or
 is detached >>

@@ -60,10 +60,10 @@ parallelize {
 
 my @expected = (1) x $N_threads;
 is_deeply(\@could_get_data, \@expected,
-	'Threads could access data created by sibbling threads')
+	'Threads could access data created by sibling threads')
 	or diag("expected all 1s, actually got @could_get_data");
 is_deeply(\@data_is_correct, \@expected,
-	'Data created by sibbling threads worked correctly')
+	'Data created by sibling threads worked correctly')
 	or diag("expected all 1s, actually got @data_is_correct");
 
 # Make sure the retrieval causes a croak
