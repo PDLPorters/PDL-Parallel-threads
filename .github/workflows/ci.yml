@@ -25,15 +25,21 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         perl-version: ['5.10', '5.14', '5.20']
+        perl-threaded: [true]
         include:
           - perl-version: '5.30'
+            perl-threaded: false # Devel::Cover does not yet work with threads.
             os: ubuntu-latest
             release-test: true
             coverage: true
           - perl-version: '5.30'
             os: windows-latest
           - perl-version: '5.30'
+            perl-threaded: true
             os: macos-11
+          - perl-version: '5.30'
+            perl-threaded: false
+            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: 'ci-dist: target-setup-perl'
@@ -41,6 +47,7 @@ jobs:
         with:
           target-setup-perl: true
           perl-version: ${{ matrix.perl-version }}
+          perl-threaded: ${{ matrix.perl-threaded }}
       - name: Install PDL dependencies
         uses: PDLPorters/devops/github-actions/install-dep-pdl-dep@master
       - name: 'ci-dist: target-all'
