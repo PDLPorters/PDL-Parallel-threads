@@ -82,16 +82,16 @@ my $build = $class->new(
 	meta_merge => {
 		resources => {
 			repository
-				=> 'http://github.com/run4flat/PDL-Parallel-threads',
+				=> 'http://github.com/PDLPorters/PDL-Parallel-threads',
 #				=> {
-#					web => 'http://github.com/run4flat/PDL-Parallel-threads',
-#					url => 'git://github.com/run4flat/PDL-Parallel-threads.git',
+#					web => 'http://github.com/PDLPorters/PDL-Parallel-threads',
+#					url => 'git://github.com/PDLPorters/PDL-Parallel-threads.git',
 #					type => 'git',
 #				},
 			bugtracker
-				=> 'http://github.com/run4flat/PDL-Parallel-threads/issues',
+				=> 'http://github.com/PDLPorters/PDL-Parallel-threads/issues',
 #				=> {
-#					web => 'http://github.com/run4flat/PDL-Parallel-threads/issues',
+#					web => 'http://github.com/PDLPorters/PDL-Parallel-threads/issues',
 #				},
 		},
 		no_index => {
