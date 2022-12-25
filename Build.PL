@@ -73,7 +73,7 @@ my $build = $class->new(
 		'Test::Exception' => 0,
 	},
 	requires => {
-		'perl'            => '5.8.0',  # PerlIO
+		'perl'            => '5.14.0',
 		'PDL'             => '2.4.10', # Windows mmapping
 		'threads::shared' => '1.21',   # shared_clone
 	},
