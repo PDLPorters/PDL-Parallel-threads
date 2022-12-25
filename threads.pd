@@ -1,3 +1,11 @@
+use strict;
+use warnings;
+
+our $VERSION = '0.04';
+pp_setversion($VERSION);
+
+pp_add_exported('share_pdls retrieve_pdls free_pdls');
+pp_addpm( {At => 'Top'}, <<'EOF' );
 package PDL::Parallel::threads;
 
 use strict;
@@ -15,10 +23,6 @@ BEGIN {
 		threads::shared->import();
 		1;
 	};
-	
-	our $VERSION = '0.04';
-	use XSLoader;
-	XSLoader::load 'PDL::Parallel::threads', $VERSION;
 }
 
 # These are the means by which we share data across Perl threads. Note that
@@ -30,10 +34,6 @@ my %dim_arrays :shared;
 my %types :shared;
 my %originating_tid :shared;
 my %file_names :shared;
-
-require Exporter;
-our @ISA = qw(Exporter);
-our @EXPORT_OK = qw(share_pdls retrieve_pdls free_pdls);
 
 # PDL data should not be naively copied by Perl. This is only necessary
 # for older versions of PDL. Newer versions contain the CLONE_SKIP
@@ -57,15 +57,15 @@ sub share_pdls {
 	croak("share_pdls: expected key/value pairs")
 		unless @_ % 2 == 0;
 	my %to_store = @_;
-	
+
 	while (my ($name, $to_store) = each %to_store) {
 		$name = auto_package_name($name);
-		
+
 		# Make sure we're not overwriting already shared data
 		if (exists $datasv_pointers{$name} or exists $file_names{$name}) {
 			croak("share_pdls: you already have data associated with '$name'");
 		}
-		
+
 		# Handle the special case where a memory mapped piddle was sent, and
 		# for which the memory mapped piddle knows its file name
 		if ( eval{$to_store->isa("PDL")}
@@ -73,7 +73,7 @@ sub share_pdls {
 		) {
 			$to_store = $to_store->hdr->{mmapped_filename};
 		}
-		
+
 		if ( eval{$to_store->isa("PDL")} ) {
 			# Share piddle memory directly
 			$datasv_pointers{$name} = eval{_get_and_mark_datasv_pointer($to_store)};
@@ -126,10 +126,10 @@ sub share_pdls {
 sub free_pdls {
 	# Keep track of each name that is successfully freed
 	my @removed;
-	
+
 	for my $short_name (@_) {
 		my $name = auto_package_name($short_name);
-		
+
 		# If it's a regular piddle, decrement the memory's refcount
 		if (exists $datasv_pointers{$name}) {
 			_dec_datasv_refcount($datasv_pointers{$name});
@@ -149,7 +149,7 @@ sub free_pdls {
 			push @removed, '';
 		}
 	}
-	
+
 	return @removed;
 }
 
@@ -164,11 +164,11 @@ sub PDL::share_as {
 # given name(s).
 sub retrieve_pdls {
 	return if @_ == 0;
-	
+
 	my @to_return;
 	for my $short_name (@_) {
 		my $name = auto_package_name($short_name);
-		
+
 		if (exists $datasv_pointers{$name}) {
 			# Make sure that the originating thread still exists, or the
 			# data will be gone.
@@ -178,18 +178,18 @@ sub retrieve_pdls {
 				croak("retrieve_pdls: '$name' was created in a thread that "
 						. "has ended or is detached");
 			}
-			
+
 			# Create the new thinly wrapped piddle
 			my $new_piddle = _new_piddle_around($datasv_pointers{$name},
 				$types{$name});
-			
+
 			# Set the dimensions
 			my @dims = @{$dim_arrays{$name}};
 			$new_piddle->setdims(\@dims);
-			
+
 			# Set flags to protect the piddle's memory:
 			_update_piddle_data_state_flags($new_piddle);
-			
+
 			push @to_return, $new_piddle;
 		}
 		elsif (exists $file_names{$name}) {
@@ -199,13 +199,13 @@ sub retrieve_pdls {
 			croak("retrieve_pdls could not find data associated with '$name'");
 		}
 	}
-	
+
 	# In list context, return all the piddles
 	return @to_return if wantarray;
-	
+
 	# Scalar context only makes sense if they asked for a single name
 	return $to_return[0] if @_ == 1;
-	
+
 	# We're here if they asked for multiple names but assigned the result
 	# to a single scalar, which is probably not what they meant:
 	carp("retrieve_pdls: requested many piddles... in scalar context?");
@@ -245,45 +245,45 @@ This documentation describes version 0.04 of PDL::Parallel::threads.
 
  use PDL;
  use PDL::Parallel::threads qw(retrieve_pdls share_pdls);
- 
+
  # Technically, this is pulled in for you by PDL::Parallel::threads,
  # but using it in your code pulls in the named functions like async.
  use threads;
- 
+
  # Also, technically, you can use PDL::Parallel::threads with
  # single-threaded programs, and even with perl's not compiled
  # with thread support.
- 
+
  # Create some shared PDL data
  zeroes(1_000_000)->share_as('My::shared::data');
- 
+
  # Create a piddle and share its data
  my $test_data = sequence(100);
  share_pdls(some_name => $test_data);  # allows multiple at a time
  $test_data->share_as('some_name');    # or use the PDL method
- 
+
  # Or work with memory mapped files:
  share_pdls(other_name => 'mapped_file.dat');
- 
+
  # Kick off some processing in the background
  async {
      my ($shallow_copy, $mapped_piddle)
          = retrieve_pdls('some_name', 'other_name');
-     
+
      # thread-local memory
      my $other_piddle = sequence(20);
-     
+
      # Modify the shared data:
      $shallow_copy++;
  };
- 
+
  # ... do some other stuff ...
- 
+
  # Rejoin all threads
  for my $thr (threads->list) {
      $thr->join;
  }
- 
+
  use PDL::NiceSlice;
  print "First ten elements of test_data are ",
      $test_data(0:9), "\n";
@@ -314,7 +314,7 @@ a piddle that is based on actual I<physical memory>, such as the result of
 L<PDL::Core/zeroes>. You can also share data using I<memory mapped> files.
 (Note: PDL v2.4.11 and higher support memory mapped piddles on all major
 platforms, including Windows.) There are other sorts of piddles whose data
-you cannot share. You cannot directly share slices (though a simple 
+you cannot share. You cannot directly share slices (though a simple
 L<PDL::Core/sever> or L<PDL::Core/copy> will give you a
 piddle based on physical memory that you can share). Also, certain functions
 wrap external data into piddles so you can manipulate them with PDL methods.
@@ -327,7 +327,7 @@ something that you can safey share.
 
 The mechanism by which this module achieves data sharing of physical memory
 is remarkably cheap. It's even cheaper then a simple affine transformation.
-The sharing works by creating a new shell of a piddle for each call to 
+The sharing works by creating a new shell of a piddle for each call to
 L</retrieve_pdls> and setting that piddle's memory structure to point back to
 the same locations of the original (shared) piddle. This means that you can
 share piddles that are created with standard constructors like
@@ -348,7 +348,7 @@ from your main thread.
 =head2 Memory Mapped Data
 
 The mechanism by which this module achieves data sharing of memory mapped
-files is exactly how you would share data across threads or processes using 
+files is exactly how you would share data across threads or processes using
 L<PDL::IO:::FastRaw>. However, there are a couple of important caveats to
 using memory mapped piddles with C<PDL::Parallel::threads>. First, you must
 load C<PDL::Parallel::threads> before loading L<PDL::IO::FastRaw>:
@@ -356,7 +356,7 @@ load C<PDL::Parallel::threads> before loading L<PDL::IO::FastRaw>:
  # Good
  use PDL::Parallel::threads qw(retrieve_pdls);
  use PDL::IO::FastRaw;
- 
+
  # BAD
  use PDL::IO::FastRaw;
  use PDL::Parallel::threads qw(retrieve_pdls);
@@ -417,34 +417,34 @@ names matching C</^\w+$/>. Here's an example demonstrating how this works:
  package Some::Package;
  use PDL;
  use PDL::Parallel::threads 'retrieve_pdls';
- 
+
  # Stored under '??foo'
  sequence(20)->share_as('??foo');
- 
+
  # Shared as 'Some::Package/foo'
  zeroes(100)->share_as('foo');
- 
+
  sub do_something {
    # Retrieve 'Some::Package/foo'
    my $copy_of_foo = retrieve_pdls('foo');
-   
+
    # Retrieve '??foo':
    my $copy_of_weird_foo = retrieve_pdls('??foo');
-   
+
    # ...
  }
- 
+
  # Move to a different package:
  package Other::Package;
  use PDL::Parallel::threads 'retrieve_pdls';
- 
+
  sub something_else {
    # Retrieve 'Some::Package/foo'
    my $copy_of_foo = retrieve_pdls('Some::Package/foo');
-   
+
    # Retrieve '??foo':
    my $copy_of_weird_foo = retrieve_pdls('??foo');
-   
+
    # ...
  }
 
@@ -516,7 +516,7 @@ thing as L</shared_pdls>, but it's invocation is a little different:
 
  # Directly share some constructed memory
  sequence(20)->share_as('baz');
- 
+
  # Share individual piddles:
  my $data1 = zeroes(20);
  my $data2 = ones(30);
@@ -528,7 +528,7 @@ This can lead to some amusing ways of storing partial calculations partway
 through a long chain:
 
  my $results = $input->sumover->share_as('pre_offset') + $offset;
- 
+
  # Now you can get the result of the sumover operation
  # before that offset was added, by calling:
  my $pre_offset = retrieve_pdls('pre_offset');
@@ -609,7 +609,9 @@ can handle trouble with perl C<grep>s and other conditionals:
 This function simply removes a piddle's memory from the shared pool. It
 does not interact with bad values in any way. But then again, it does not
 interfere with or screw up bad values, either.
+EOF
 
+pp_addpm( {At => 'Bot'}, <<'EOF' );
 =head1 DIAGNOSTICS
 
 =over
@@ -787,4 +789,119 @@ SOFTWARE), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGES.
 
 =cut
+EOF
 
+pp_addhdr(<<'EOF');
+static void default_magic (pdl *p, size_t pa) {
+	/* Handle the reference counting by hand, thus allowing Perl to handle
+	 * the SV cleanup; zero the piddle's pointer so it doesn't touch the
+	 * SV late in the piddle's cleanup stage. */
+	SvREFCNT_dec((SV*)(p->datasv));
+	p->datasv = 0;
+	p->data = 0;
+}
+EOF
+
+pp_addxs(<<'EOF');
+# Integers (which can be cast to and from pointers) are easily shared using
+# threads::shared in a shared hash. This method provides a way to obtain
+# the pointer to the datasv for the incoming piddle, and it increments the
+# SV's refcount.
+size_t
+_get_and_mark_datasv_pointer (piddle)
+	pdl * piddle
+	CODE:
+		if (piddle->trans_parent) {
+			croak("the piddle is a slice.\n"); /* Slice, data flow, etc */
+		}
+		else if (0 == (piddle->state & PDL_ALLOCATED)) {
+			croak("the piddle does not have any allocated memory (but is "
+				"not a slice?).\n"); /* Not sure how this happens */
+		}
+		else if (piddle->datasv == 0) {
+			croak("the piddle has no datasv, which means it's probably "
+				"a special piddle.\n"); /* PLplot, mapped with flexraw */
+		}
+		else if (piddle->data != (void*)SvPV_nolen((SV*)(piddle->datasv))) {
+			croak("the piddle's data does not come from the datasv.\n");
+			/* Not sure how this happens. */
+		}
+		else {
+			/* Increment the datasv's refcount */
+			SvREFCNT_inc((SV*)(piddle->datasv));
+
+			/* Tell this piddle to no longer manage its memory */
+			piddle->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
+			PDL->add_deletedata_magic(piddle, default_magic, 0);
+
+			/* return the pointer */
+			RETVAL = (size_t)(piddle->datasv);
+		}
+	OUTPUT:
+		RETVAL
+
+
+# Given a pointer value that was retrieved with _get_and_mark_datasv_pointer,
+# this method creates a new piddle and sets the piddle's datasv to the
+# provided location. Combined with proper dim/datatype munging after this
+# method is called, as well as the proper flag setting, makes the piddle a
+# very thin clone of the original piddle.
+pdl *
+_new_piddle_around (datasv_pointer, datatype)
+	size_t datasv_pointer
+	int datatype
+	CODE:
+		/* Create a new piddle container */
+		pdl * piddle = PDL->pdlnew();
+
+		/* set the datasv to what was supplied */
+		piddle->datasv = (void*) datasv_pointer;
+		piddle->data = (void*) SvPV_nolen((SV*)(datasv_pointer));
+
+		/* Set the datatype to that supplied */
+		piddle->datatype = datatype;
+
+
+		/* Tell the piddle that it doesn't really own the data... */
+		PDL->add_deletedata_magic(piddle, default_magic, 0);
+
+		/* Increment the SV's reference count so the data persistents
+		 * as long as this piddle is around. We'll take care of setting
+		 * the piddle state later. */
+		SvREFCNT_inc((SV*)(piddle->datasv));
+
+		RETVAL = piddle;
+	OUTPUT:
+		RETVAL
+
+
+void
+_update_piddle_data_state_flags (piddle)
+	pdl * piddle
+	CODE:
+		/* Tell the piddle that it doesn't really own the data... */
+		piddle->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
+
+# Needed in the data removal section
+void
+_dec_datasv_refcount (datasv_pointer)
+	size_t datasv_pointer
+	CODE:
+		SvREFCNT_dec((SV*)(datasv_pointer));
+
+# Super-internal function, used for testing
+int
+__get_pdl_datasv_ref_count (piddle)
+	pdl * piddle
+	CODE:
+		if (piddle->datasv == 0) {
+			RETVAL = -1;
+		}
+		else {
+			RETVAL = SvREFCNT((SV*)(piddle->datasv));
+		}
+	OUTPUT:
+		RETVAL
+EOF
+
+pp_done;

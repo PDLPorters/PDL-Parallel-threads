@@ -1,12 +1,11 @@
-Build.PL
+Makefile.PL
 examples/barrier-sync.pl
 examples/perl-barrier.pl
 examples/test-child-slice.pl
 examples/test-direct-store.pl
 examples/test-memory-consumption.pl
 examples/test-undef.pl
-lib/PDL/Parallel/threads.pm
-lib/PDL/Parallel/threads.xs
+threads.pd
 lib/PDL/Parallel/threads/SIMD.pm
 MANIFEST			This list of files
 ppport.h
@@ -18,5 +17,3 @@ t/03_name_munging.t
 t/10_physical_piddles.t
 t/11_memory_mapped.t
 typemap
-META.yml
-META.json

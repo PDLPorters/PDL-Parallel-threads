@@ -55,7 +55,7 @@ jobs:
         with:
           target-setup-perl: false
           target-install-dist-perl-deps: true
-          dist-perl-deps-configure: PDL Module::Build
+          dist-perl-deps-configure: PDL
           target-test-release-testing: true
           target-test: true
           test-enable-release-testing: ${{ matrix.release-test }}
