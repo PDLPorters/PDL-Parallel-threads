@@ -16,4 +16,3 @@ t/02_non_threaded.t
 t/03_name_munging.t
 t/10_physical_piddles.t
 t/11_memory_mapped.t
-typemap
