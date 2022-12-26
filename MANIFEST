@@ -1,7 +1,6 @@
 Makefile.PL
 examples/barrier-sync.pl
 examples/perl-barrier.pl
-examples/test-child-slice.pl
 examples/test-direct-store.pl
 examples/test-memory-consumption.pl
 examples/test-undef.pl
