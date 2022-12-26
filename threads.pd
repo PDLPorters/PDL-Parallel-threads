@@ -893,12 +893,7 @@ int
 __get_pdl_datasv_ref_count (p)
 	pdl * p
 	CODE:
-		if (p->datasv == 0) {
-			RETVAL = -1;
-		}
-		else {
-			RETVAL = SvREFCNT((SV*)(p->datasv));
-		}
+		RETVAL = !p->datasv ? -1 : SvREFCNT((SV*)(p->datasv));
 	OUTPUT:
 		RETVAL
 EOF
