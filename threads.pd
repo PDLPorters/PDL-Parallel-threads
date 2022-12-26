@@ -813,29 +813,27 @@ _get_and_mark_datasv_pointer (p)
 		if (p->trans_parent) {
 			croak("the ndarray is a slice.\n"); /* Slice, data flow, etc */
 		}
-		else if (0 == (p->state & PDL_ALLOCATED)) {
+		if (0 == (p->state & PDL_ALLOCATED)) {
 			croak("the ndarray does not have any allocated memory (but is "
 				"not a slice?).\n"); /* Not sure how this happens */
 		}
-		else if (p->datasv == 0) {
+		if (p->datasv == 0) {
 			croak("the ndarray has no datasv, which means it's probably "
 				"a special ndarray.\n"); /* PLplot, mapped with flexraw */
 		}
-		else if (p->data != (void*)SvPV_nolen((SV*)(p->datasv))) {
+		if (p->data != (void*)SvPV_nolen((SV*)(p->datasv))) {
 			croak("the ndarray's data does not come from the datasv.\n");
 			/* Not sure how this happens. */
 		}
-		else {
-			/* Increment the datasv's refcount */
-			SvREFCNT_inc((SV*)(p->datasv));
+		/* Increment the datasv's refcount */
+		SvREFCNT_inc((SV*)(p->datasv));
 
-			/* Tell this ndarray to no longer manage its memory */
-			p->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
-			PDL->add_deletedata_magic(p, default_magic, 0);
+		/* Tell this ndarray to no longer manage its memory */
+		p->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
+		PDL->add_deletedata_magic(p, default_magic, 0);
 
-			/* return the pointer */
-			RETVAL = (size_t)(p->datasv);
-		}
+		/* return the pointer */
+		RETVAL = (size_t)(p->datasv);
 	OUTPUT:
 		RETVAL
 
