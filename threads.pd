@@ -26,8 +26,8 @@ BEGIN {
 }
 
 # These are the means by which we share data across Perl threads. Note that
-# we cannot share piddles directly across threads, but we can share arrays
-# of scalars, scalars whose integer values are the pointers to piddle data,
+# we cannot share ndarrays directly across threads, but we can share arrays
+# of scalars, scalars whose integer values are the pointers to ndarray data,
 # etc.
 my %datasv_pointers :shared;
 my %dim_arrays :shared;
@@ -66,8 +66,8 @@ sub share_pdls {
 			croak("share_pdls: you already have data associated with '$name'");
 		}
 
-		# Handle the special case where a memory mapped piddle was sent, and
-		# for which the memory mapped piddle knows its file name
+		# Handle the special case where a memory mapped ndarray was sent, and
+		# for which the memory mapped ndarray knows its file name
 		if ( eval{$to_store->isa("PDL")}
 			and exists $to_store->hdr->{mmapped_filename}
 		) {
@@ -75,13 +75,13 @@ sub share_pdls {
 		}
 
 		if ( eval{$to_store->isa("PDL")} ) {
-			# Share piddle memory directly
+			# Share ndarray memory directly
 			$datasv_pointers{$name} = eval{_get_and_mark_datasv_pointer($to_store)};
 			if ($@) {
 				my $error = $@;
 				chomp $error;
 				delete $datasv_pointers{$name};
-				croak('share_pdls: Could not share a piddle under '
+				croak('share_pdls: Could not share an ndarray under '
 					. "name '$name' because $error");
 			}
 			if ($can_use_threads) {
@@ -130,7 +130,7 @@ sub free_pdls {
 	for my $short_name (@_) {
 		my $name = auto_package_name($short_name);
 
-		# If it's a regular piddle, decrement the memory's refcount
+		# If it's a regular ndarray, decrement the memory's refcount
 		if (exists $datasv_pointers{$name}) {
 			_dec_datasv_refcount($datasv_pointers{$name});
 			delete $datasv_pointers{$name};
@@ -153,14 +153,14 @@ sub free_pdls {
 	return @removed;
 }
 
-# PDL method to share an individual piddle
+# PDL method to share an individual ndarray
 sub PDL::share_as {
 	my ($self, $name) = @_;
 	share_pdls(auto_package_name($name) => $self);
 	return $self;
 }
 
-# Method to get a piddle that points to the shared data assocaited with the
+# Method to get an ndarray that points to the shared data assocaited with the
 # given name(s).
 sub retrieve_pdls {
 	return if @_ == 0;
@@ -179,18 +179,18 @@ sub retrieve_pdls {
 						. "has ended or is detached");
 			}
 
-			# Create the new thinly wrapped piddle
-			my $new_piddle = _new_piddle_around($datasv_pointers{$name},
+			# Create the new thinly wrapped ndarray
+			my $new_ndarray = _new_ndarray_around($datasv_pointers{$name},
 				$types{$name});
 
 			# Set the dimensions
 			my @dims = @{$dim_arrays{$name}};
-			$new_piddle->setdims(\@dims);
+			$new_ndarray->setdims(\@dims);
 
-			# Set flags to protect the piddle's memory:
-			_update_piddle_data_state_flags($new_piddle);
+			# Set flags to protect the ndarray's memory:
+			_update_ndarray_data_state_flags($new_ndarray);
 
-			push @to_return, $new_piddle;
+			push @to_return, $new_ndarray;
 		}
 		elsif (exists $file_names{$name}) {
 			push @to_return, mapfraw($file_names{$name});
@@ -200,7 +200,7 @@ sub retrieve_pdls {
 		}
 	}
 
-	# In list context, return all the piddles
+	# In list context, return all the ndarrays
 	return @to_return if wantarray;
 
 	# Scalar context only makes sense if they asked for a single name
@@ -208,15 +208,15 @@ sub retrieve_pdls {
 
 	# We're here if they asked for multiple names but assigned the result
 	# to a single scalar, which is probably not what they meant:
-	carp("retrieve_pdls: requested many piddles... in scalar context?");
+	carp("retrieve_pdls: requested many ndarrays... in scalar context?");
 	return $to_return[0];
 }
 
 # Now for a nasty hack: this code modifies PDL::IO::FastRaw's symbol table
-# so that it adds the "mmapped_filename" key to the piddle's header before
+# so that it adds the "mmapped_filename" key to the ndarray's header before
 # returning the result. As long as the user says "use PDL::IO::FastRaw"
 # *after* using this module, this will allow for transparent sharing of both
-# memory mapped and standard piddles.
+# memory mapped and standard ndarrays.
 
 {
 	no warnings 'redefine';
@@ -257,7 +257,7 @@ This documentation describes version 0.04 of PDL::Parallel::threads.
  # Create some shared PDL data
  zeroes(1_000_000)->share_as('My::shared::data');
 
- # Create a piddle and share its data
+ # Create an ndarray and share its data
  my $test_data = sequence(100);
  share_pdls(some_name => $test_data);  # allows multiple at a time
  $test_data->share_as('some_name');    # or use the PDL method
@@ -267,11 +267,11 @@ This documentation describes version 0.04 of PDL::Parallel::threads.
 
  # Kick off some processing in the background
  async {
-     my ($shallow_copy, $mapped_piddle)
+     my ($shallow_copy, $mapped_ndarray)
          = retrieve_pdls('some_name', 'other_name');
 
      # thread-local memory
-     my $other_piddle = sequence(20);
+     my $other_ndarray = sequence(20);
 
      # Modify the shared data:
      $shallow_copy++;
@@ -301,22 +301,22 @@ attributes to mark shared variables. Instead, you must explicitly share your
 data by using the L</share_pdls> function or L</share_as> PDL method that this
 module introduces. Those both associate a name with your data, which you use
 in other threads to retrieve the data with the L</retrieve_pdls>. Once your
-thread has access to the piddle data, any modifications will operate directly
+thread has access to the ndarray data, any modifications will operate directly
 on the shared memory, which is exactly what shared data is supposed to do.
 When you are completely done using a piece of data, you need to explicitly
 remove the data from the shared pool with the L</free_pdls> function.
 Otherwise your data will continue to consume memory until the originating
 thread terminates, or put differently, you will have a memory leak.
 
-This module lets you share two sorts of piddle data. You can share data for
-a piddle that is based on actual I<physical memory>, such as the result of
+This module lets you share two sorts of ndarray data. You can share data for
+an ndarray that is based on actual I<physical memory>, such as the result of
 L<PDL::Core/zeroes>. You can also share data using I<memory mapped> files.
-(Note: PDL v2.4.11 and higher support memory mapped piddles on all major
-platforms, including Windows.) There are other sorts of piddles whose data
+(Note: PDL v2.4.11 and higher support memory mapped ndarrays on all major
+platforms, including Windows.) There are other sorts of ndarrays whose data
 you cannot share. You cannot directly share slices (though a simple
-L<PDL::Core/sever> or L<PDL::Core/copy> will give you a
-piddle based on physical memory that you can share). Also, certain functions
-wrap external data into piddles so you can manipulate them with PDL methods.
+L<PDL::Core/sever> or L<PDL::Core/copy> will give you an
+ndarray based on physical memory that you can share). Also, certain functions
+wrap external data into ndarrays so you can manipulate them with PDL methods.
 For example, see L<PDL::Graphics::PLplot/plmap> and
 L<PDL::Graphics::PLplot/plmeridians>. These you cannot share directly, but
 making a physical copy with L<PDL::Core/copy> will give you
@@ -326,15 +326,15 @@ something that you can safey share.
 
 The mechanism by which this module achieves data sharing of physical memory
 is remarkably cheap. It's even cheaper then a simple affine transformation.
-The sharing works by creating a new shell of a piddle for each call to
-L</retrieve_pdls> and setting that piddle's memory structure to point back to
-the same locations of the original (shared) piddle. This means that you can
-share piddles that are created with standard constructors like
+The sharing works by creating a new shell of an ndarray for each call to
+L</retrieve_pdls> and setting that ndarray's memory structure to point back to
+the same locations of the original (shared) ndarray. This means that you can
+share ndarrays that are created with standard constructors like
 L<PDL::Core/zeroes>, L<PDL::Core/pdl>, and L<PDL::Basic/sequence>, or which
 are the result of operations and function evaluations for which there is no
 data flow, such as L<PDL::Core/cat> (but not L<PDL::Core/dog>), arithmetic,
 L<PDL::Core/copy>, and L<PDL::Core/sever>. When in doubt, C<sever> your
-piddle before sharing and everything should work.
+ndarray before sharing and everything should work.
 
 There is an important nuance to sharing physical memory: The memory will
 always be freed when the originating thread terminates, even if it terminated
@@ -349,7 +349,7 @@ from your main thread.
 The mechanism by which this module achieves data sharing of memory mapped
 files is exactly how you would share data across threads or processes using
 L<PDL::IO:::FastRaw>. However, there are a couple of important caveats to
-using memory mapped piddles with C<PDL::Parallel::threads>. First, you must
+using memory mapped ndarrays with C<PDL::Parallel::threads>. First, you must
 load C<PDL::Parallel::threads> before loading L<PDL::IO::FastRaw>:
 
  # Good
@@ -368,15 +368,15 @@ Furthermore, any memory mapped files B<must> have header files associated
 with the data file. That is, if the data file is F<foo.dat>, you must have
 a header file called F<foo.dat.hdr>. This is overly restrictive and in the
 future the module may perform more internal tweaks to L<PDL::IO::FastRaw> to
-store whatever options were used to create the original piddle. But for the
+store whatever options were used to create the original ndarray. But for the
 meantime, be sure that you have a header file for your raw data file.
 
 There is much less nuance to sharing memory mapped data across threads
 compared to directly sharing physical memory as discussed above. When
 you ask for a thread-local copy of that file, you get your very own fully
-baked memory-mapped piddle that gets freed when the piddle goes out of scope.
+baked memory-mapped ndarray that gets freed when the ndarray goes out of scope.
 This means you cannot get memory leaks. Furthermore, the data underlying the
-piddle come from a file and not from a shared space in RAM. That means there
+ndarray come from a file and not from a shared space in RAM. That means there
 is no "originating thread", and you cannot trigger a segmentation fault
 by trying to access memory that has disappeared, because... there's nothing
 that can disappear.
@@ -460,18 +460,18 @@ This module provides three stand-alone functions and adds one new PDL method.
 
 =for ref
 
-Shares piddle data across threads using the given names.
+Shares ndarray data across threads using the given names.
 
 =for usage
 
-  share_pdls (name => piddle|filename, name => piddle|filename, ...)
+  share_pdls (name => ndarray|filename, name => ndarray|filename, ...)
 
-This function takes key/value pairs where the value is the piddle to store
+This function takes key/value pairs where the value is the ndarray to store
 or the file name to memory map, and the key is the name under which to store
-the piddle or file name. You can later retrieve the memory (or a piddle
+the ndarray or file name. You can later retrieve the memory (or an ndarray
 mapped to the given file name) with the L</retrieve_pdls> method.
 
-Sharing a piddle with physical memory increments the data's reference count;
+Sharing an ndarray with physical memory increments the data's reference count;
 you can decrement the reference count by calling L</free_pdls> on the given
 C<name>. In general this ends up doing what you mean, and freeing memory
 only when you are really done using it. Memory mapped data does not need to
@@ -502,13 +502,13 @@ bad-data documentation. Expect it to happen in a forthcoming release. :-)
 
 =for ref
 
-Method to share a piddle's data across threads under the given name.
+Method to share an ndarray's data across threads under the given name.
 
 =for usage
 
-  piddle->share_as(name)
+  $pdl->share_as(name)
 
-This PDL method lets you directly share a piddle. It does the exact same
+This PDL method lets you directly share an ndarray. It does the exact same
 thing as L</shared_pdls>, but it's invocation is a little different:
 
 =for example
@@ -516,13 +516,13 @@ thing as L</shared_pdls>, but it's invocation is a little different:
  # Directly share some constructed memory
  sequence(20)->share_as('baz');
 
- # Share individual piddles:
+ # Share individual ndarrays:
  my $data1 = zeroes(20);
  my $data2 = ones(30);
  $data1->share_as('foo');
  $data2->share_as('bar');
 
-Like many other PDL methods, this method returns the just-shared piddle.
+Like many other PDL methods, this method returns the just-shared ndarray.
 This can lead to some amusing ways of storing partial calculations partway
 through a long chain:
 
@@ -535,7 +535,7 @@ through a long chain:
 This function achieves the same end as L</share_pdls>: There's More Than One
 Way To Do It, because it can make for easier-to-read code. In general I
 recommend using the C<share_as> method when you only need to share a single
-piddle memory space.
+ndarray memory space.
 
 =for bad
 
@@ -547,15 +547,15 @@ bad-data documentation. Expect it to happen in a forthcoming release. :-)
 
 =for ref
 
-Obtain piddles providing access to the data shared under the given names.
+Obtain ndarrays providing access to the data shared under the given names.
 
 =for usage
 
   my ($copy1, $copy2, ...) = retrieve_pdls (name, name, ...)
 
-This function takes a list of names and returns a list of piddles that
+This function takes a list of names and returns a list of ndarrays that
 provide access to the data shared under those names. In scalar context the
-function returns the piddle corresponding with the first named data set,
+function returns the ndarray corresponding with the first named data set,
 which is usually what you mean when you use a single name. If you specify
 multiple names but call it in scalar context, you will get a warning
 indicating that you probably meant to say something differently.
@@ -563,7 +563,7 @@ indicating that you probably meant to say something differently.
 =for example
 
  my $local_copy = retrieve_pdls('foo');
- my @both_piddles = retrieve_pdls('foo', 'bar');
+ my @both_ndarrays = retrieve_pdls('foo', 'bar');
  my ($foo, $bar) = retrieve_pdls('foo', 'bar');
 
 =for bad
@@ -605,7 +605,7 @@ can handle trouble with perl C<grep>s and other conditionals:
 
 =for bad
 
-This function simply removes a piddle's memory from the shared pool. It
+This function simply removes an ndarray's memory from the shared pool. It
 does not interact with bad values in any way. But then again, it does not
 interfere with or screw up bad values, either.
 EOF
@@ -618,7 +618,7 @@ pp_addpm( {At => 'Bot'}, <<'EOF' );
 =item C<< share_pdls: expected key/value pairs >>
 
 You called C<share_pdl> with an odd number of arguments, which means that
-you could not have supplied key/value pairs. Double-check that every piddle
+you could not have supplied key/value pairs. Double-check that every ndarray
 (or filename) that you supply is preceeded by it's shared name.
 
 =item C<< share_pdls: you already have data associated with '$name' >>
@@ -628,34 +628,34 @@ associated with that name. Typo? You can avoid namespace clashes with other
 modules by using simple names and letting C<PDL::Parallel::threads> mangle
 the name internally for you.
 
-=item C<< share_pdls: Could not share a piddle under name '$name' because ... >>
+=item C<< share_pdls: Could not share an ndarray under name '$name' because ... >>
 
 =over
 
-=item C<< ... the piddle is a slice. >>
+=item C<< ... the ndarray is a slice. >>
 
 You tried to share a slice, which is not allowed. Try C<sever>ing or
 C<copy>ing your slice, then share it.
 
-=item C<< ... the piddle does not have any allocated memory (but is not a
+=item C<< ... the ndarray does not have any allocated memory (but is not a
 slice?). >>
 
-You tried to share a piddle that does not have any memory associated with it.
+You tried to share an ndarray that does not have any memory associated with it.
 I'm actually not sure how you can do this, so if you managed to create such
-a piddle, you probably already know what's going on. :-)
+an ndarray, you probably already know what's going on. :-)
 
-=item C<< ... the piddle has no datasv, which means it's probably a special
-piddle. >>
+=item C<< ... the ndarray has no datasv, which means it's probably a special
+ndarray. >>
 
-You tried to share a piddle that has no datasv. This usually happens when
-you try to wrap a piddle around some externally provided data. It may also
+You tried to share an ndarray that has no datasv. This usually happens when
+you try to wrap an ndarray around some externally provided data. It may also
 happen when you've managed to get data from L<PDL::IO::FastRaw> and you've
 used the wrong loading order (see L</Memory Mapped Data>), or perhaps when
 you try to share data that you've mapped using L<PDL::IO::FlexRaw>.
 
-=item C<< ... the piddle's data does not come from the datasv. >>
+=item C<< ... the ndarray's data does not come from the datasv. >>
 
-You tried to share a piddle that has a funny internal structure, in which
+You tried to share an ndarray that has a funny internal structure, in which
 the data does not point to the buffer portion of the datasv. I'm not sure
 how that could happen without triggering a more specific error, so I hope
 you know what's going on if you get this. :-)
@@ -682,7 +682,7 @@ header file associated with your mapped data. Check the permissions?
 
 Yes, ostensibly you can work with a memory mapped file that is read only,
 but that's complicated and I didn't want to have to figure out how to mark
-your shared piddle as read-only. Patches welcome!
+your shared ndarray as read-only. Patches welcome!
 
 =item C<< ... the file does not exist >>
 
@@ -694,7 +694,7 @@ The file to memory map doesn't exist. Typo, perhaps?
 store >>
 
 C<share_pdls> only knows how to store memory mapped files and raw data
-piddles. It'll croak if you try to share other kinds of piddles, and it'll
+ndarrays. It'll croak if you try to share other kinds of ndarrays, and it'll
 throw this error if you try to share anything else, like a hashref.
 
 =item C<< retrieve_pdls: '$name' was created in a thread that has ended or
@@ -711,9 +711,9 @@ error.
 Pretty simple: either data has never been added under this name, or data
 under this name has been removed.
 
-=item C<< retrieve_pdls: requested many piddles... in scalar context? >>
+=item C<< retrieve_pdls: requested many ndarrays... in scalar context? >>
 
-This is just a warning. You requested multiple piddles (sent multiple names)
+This is just a warning. You requested multiple ndarrays (sent multiple names)
 but you called the function in scalar context. Why do such a thing?
 
 =back
@@ -721,16 +721,16 @@ but you called the function in scalar context. Why do such a thing?
 =head1 LIMITATIONS
 
 I have tried to make it clear, but in case you missed it, this module does
-not let you share slices or specially marked piddles. If you need to share a
+not let you share slices or specially marked ndarrays. If you need to share a
 slice, you should C<sever> or C<copy> the slice first.
 
 Another limitation is that you cannot share memory mapped files that require
 features of L<PDL::IO::FlexRaw>. That is a cool module that lets you pack
-multiple piddles into a single file, but simple cross-thread sharing is not
+multiple ndarrays into a single file, but simple cross-thread sharing is not
 trivial and is not (yet) supported.
 
 If you are dealing
-with a physical piddle (i.e. not memory mapped), you have to be a bit careful
+with a physical ndarray (i.e. not memory mapped), you have to be a bit careful
 about how the memory gets freed. If you don't call C<free_pdls> on the data,
 it will persist in memory until the end of the originating thread, which
 means you have a classic memory leak. On the other hand, if another thread
@@ -739,7 +739,7 @@ but then tries to access the data after the originating thread ends, you
 will get a segmentation fault.
 
 Finally, you B<must> load C<PDL::Parallel::threads> before loading
-L<PDL::IO::FastRaw> if you wish to share your memory mapped piddles. Also,
+L<PDL::IO::FastRaw> if you wish to share your memory mapped ndarrays. Also,
 you must have a C<.hdr> file for your data file, which is not strictly
 necessary when using C<mapfraw>. Hopefully that limitation will be lifted
 in forthcoming releases of this module.
@@ -793,8 +793,8 @@ EOF
 pp_addhdr(<<'EOF');
 static void default_magic (pdl *p, size_t pa) {
 	/* Handle the reference counting by hand, thus allowing Perl to handle
-	 * the SV cleanup; zero the piddle's pointer so it doesn't touch the
-	 * SV late in the piddle's cleanup stage. */
+	 * the SV cleanup; zero the ndarray's pointer so it doesn't touch the
+	 * SV late in the ndarray's cleanup stage. */
 	SvREFCNT_dec((SV*)(p->datasv));
 	p->datasv = 0;
 	p->data = 0;
@@ -804,82 +804,82 @@ EOF
 pp_addxs(<<'EOF');
 # Integers (which can be cast to and from pointers) are easily shared using
 # threads::shared in a shared hash. This method provides a way to obtain
-# the pointer to the datasv for the incoming piddle, and it increments the
+# the pointer to the datasv for the incoming ndarray, and it increments the
 # SV's refcount.
 size_t
-_get_and_mark_datasv_pointer (piddle)
-	pdl * piddle
+_get_and_mark_datasv_pointer (p)
+	pdl * p
 	CODE:
-		if (piddle->trans_parent) {
-			croak("the piddle is a slice.\n"); /* Slice, data flow, etc */
+		if (p->trans_parent) {
+			croak("the ndarray is a slice.\n"); /* Slice, data flow, etc */
 		}
-		else if (0 == (piddle->state & PDL_ALLOCATED)) {
-			croak("the piddle does not have any allocated memory (but is "
+		else if (0 == (p->state & PDL_ALLOCATED)) {
+			croak("the ndarray does not have any allocated memory (but is "
 				"not a slice?).\n"); /* Not sure how this happens */
 		}
-		else if (piddle->datasv == 0) {
-			croak("the piddle has no datasv, which means it's probably "
-				"a special piddle.\n"); /* PLplot, mapped with flexraw */
+		else if (p->datasv == 0) {
+			croak("the ndarray has no datasv, which means it's probably "
+				"a special ndarray.\n"); /* PLplot, mapped with flexraw */
 		}
-		else if (piddle->data != (void*)SvPV_nolen((SV*)(piddle->datasv))) {
-			croak("the piddle's data does not come from the datasv.\n");
+		else if (p->data != (void*)SvPV_nolen((SV*)(p->datasv))) {
+			croak("the ndarray's data does not come from the datasv.\n");
 			/* Not sure how this happens. */
 		}
 		else {
 			/* Increment the datasv's refcount */
-			SvREFCNT_inc((SV*)(piddle->datasv));
+			SvREFCNT_inc((SV*)(p->datasv));
 
-			/* Tell this piddle to no longer manage its memory */
-			piddle->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
-			PDL->add_deletedata_magic(piddle, default_magic, 0);
+			/* Tell this ndarray to no longer manage its memory */
+			p->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
+			PDL->add_deletedata_magic(p, default_magic, 0);
 
 			/* return the pointer */
-			RETVAL = (size_t)(piddle->datasv);
+			RETVAL = (size_t)(p->datasv);
 		}
 	OUTPUT:
 		RETVAL
 
 
 # Given a pointer value that was retrieved with _get_and_mark_datasv_pointer,
-# this method creates a new piddle and sets the piddle's datasv to the
+# this method creates a new ndarray and sets the ndarray's datasv to the
 # provided location. Combined with proper dim/datatype munging after this
-# method is called, as well as the proper flag setting, makes the piddle a
-# very thin clone of the original piddle.
+# method is called, as well as the proper flag setting, makes the ndarray a
+# very thin clone of the original ndarray.
 pdl *
-_new_piddle_around (datasv_pointer, datatype)
+_new_ndarray_around (datasv_pointer, datatype)
 	size_t datasv_pointer
 	int datatype
 	CODE:
-		/* Create a new piddle container */
-		pdl * piddle = PDL->pdlnew();
+		/* Create a new ndarray container */
+		pdl * p = PDL->pdlnew();
 
 		/* set the datasv to what was supplied */
-		piddle->datasv = (void*) datasv_pointer;
-		piddle->data = (void*) SvPV_nolen((SV*)(datasv_pointer));
+		p->datasv = (void*) datasv_pointer;
+		p->data = (void*) SvPV_nolen((SV*)(datasv_pointer));
 
 		/* Set the datatype to that supplied */
-		piddle->datatype = datatype;
+		p->datatype = datatype;
 
 
-		/* Tell the piddle that it doesn't really own the data... */
-		PDL->add_deletedata_magic(piddle, default_magic, 0);
+		/* Tell the ndarray that it doesn't really own the data... */
+		PDL->add_deletedata_magic(p, default_magic, 0);
 
 		/* Increment the SV's reference count so the data persistents
-		 * as long as this piddle is around. We'll take care of setting
-		 * the piddle state later. */
-		SvREFCNT_inc((SV*)(piddle->datasv));
+		 * as long as this ndarray is around. We'll take care of setting
+		 * the ndarray state later. */
+		SvREFCNT_inc((SV*)(p->datasv));
 
-		RETVAL = piddle;
+		RETVAL = p;
 	OUTPUT:
 		RETVAL
 
 
 void
-_update_piddle_data_state_flags (piddle)
-	pdl * piddle
+_update_ndarray_data_state_flags (p)
+	pdl * p
 	CODE:
-		/* Tell the piddle that it doesn't really own the data... */
-		piddle->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
+		/* Tell the ndarray that it doesn't really own the data... */
+		p->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
 
 # Needed in the data removal section
 void
@@ -890,14 +890,14 @@ _dec_datasv_refcount (datasv_pointer)
 
 # Super-internal function, used for testing
 int
-__get_pdl_datasv_ref_count (piddle)
-	pdl * piddle
+__get_pdl_datasv_ref_count (p)
+	pdl * p
 	CODE:
-		if (piddle->datasv == 0) {
+		if (p->datasv == 0) {
 			RETVAL = -1;
 		}
 		else {
-			RETVAL = SvREFCNT((SV*)(piddle->datasv));
+			RETVAL = SvREFCNT((SV*)(p->datasv));
 		}
 	OUTPUT:
 		RETVAL

@@ -9,10 +9,10 @@ my $N_threads = 5;
 
 use PDL::NiceSlice;
 
-my $piddle = zeroes(20);
-my $slice = $piddle->(0:9);
-print "piddle:\n";
-$piddle->dump;
+my $pdl = zeroes(20);
+my $slice = $pdl->(0:9);
+print "ndarray:\n";
+$pdl->dump;
 print "slice:\n";
 $slice->dump;
 my $second = sequence(20);
@@ -28,20 +28,20 @@ $second->dump;
 print "rotation:\n";
 $rotation->dump;
 
-$piddle->dump;
-$piddle->share_as('test');
+$pdl->dump;
+$pdl->share_as('test');
 $rotation->dump;	
 $rotation->share_as('rotated');
 
 parallelize {
 	my $tid = shift;
-	my ($piddle, $rotated) = retrieve_pdls('test', 'rotated');
-	$piddle($tid) .= $tid;
+	my ($pdl, $rotated) = retrieve_pdls('test', 'rotated');
+	$pdl($tid) .= $tid;
 	$rotated($tid) .= $tid;
 } $N_threads;
 
 
-print "Final piddle value is $piddle\n";
+print "Final ndarray value is $pdl\n";
 print "Slice is $slice\n";
-print "Rotated piddle is $rotation\n";
-print "Parent of rotated piddle $second\n";
+print "Rotated ndarray is $rotation\n";
+print "Parent of rotated ndarray $second\n";

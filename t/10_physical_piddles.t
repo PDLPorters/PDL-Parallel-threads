@@ -116,7 +116,7 @@ for my $type_letter (keys %workspaces) {
 	$expected .= (zeroes($N_threads, 2)->xvals + 1)->sqrt + pdl(5)->sqrt;
 	# Perform an exact comparison. The operations may have high bit coverage,
 	# but they should also be free from bit noise, I hope.
-	ok(all($workspace == $expected), "Sharing $type piddles works")
+	ok(all($workspace == $expected), "Sharing $type ndarrays works")
 		or diag("Got workspace of $workspace; expected $expected");
 }
 
@@ -128,13 +128,13 @@ for my $type_letter (keys %workspaces) {
 my $slice = $workspaces{d}->(2:-3);
 throws_ok {
 	$slice->share_as('slice');
-} qr/share_pdls: Could not share a piddle under.*because the piddle is a slice/
+} qr/share_pdls: Could not share an ndarray under.*because the ndarray is a slice/
 , 'Sharing a slice croaks';
 
 my $rotation = $workspaces{d}->rotate(5);
 throws_ok {
 	$rotation->share_as('rotation')
-} qr/share_pdls: Could not share a piddle under.*because the piddle is a slice/
+} qr/share_pdls: Could not share an ndarray under.*because the ndarray is a slice/
 , 'Sharing a rotation (slice) croaks';
 
 

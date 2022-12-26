@@ -27,8 +27,8 @@ parallelize {
 	my $pid = parallel_id;
 	
 	# Create data that is unique to this thread
-	my $piddle = ones(10) * $pid;
-	$piddle->share_as("data$pid");
+	my $pdl = ones(10) * $pid;
+	$pdl->share_as("data$pid");
 	
 	# We will get the data from the *previous* thread (modulo the number of
 	# threads, of course: circular boundary conditions)
