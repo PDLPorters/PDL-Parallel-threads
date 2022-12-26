@@ -33,4 +33,4 @@ parallelize {
 } $N_threads;
 
 
-print "Final piddle value is $piddle\n";
+print "Final piddle value is ", retrieve_pdls('test'), "\n";
