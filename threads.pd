@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 pp_setversion($VERSION);
 
 pp_add_exported('share_pdls retrieve_pdls free_pdls');
