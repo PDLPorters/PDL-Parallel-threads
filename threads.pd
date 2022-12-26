@@ -509,7 +509,7 @@ Method to share an ndarray's data across threads under the given name.
   $pdl->share_as(name)
 
 This PDL method lets you directly share an ndarray. It does the exact same
-thing as L</shared_pdls>, but it's invocation is a little different:
+thing as L</shared_pdls>, but its invocation is a little different:
 
 =for example
 
@@ -619,7 +619,7 @@ pp_addpm( {At => 'Bot'}, <<'EOF' );
 
 You called C<share_pdl> with an odd number of arguments, which means that
 you could not have supplied key/value pairs. Double-check that every ndarray
-(or filename) that you supply is preceeded by it's shared name.
+(or filename) that you supply is preceded by its shared name.
 
 =item C<< share_pdls: you already have data associated with '$name' >>
 

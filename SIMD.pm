@@ -214,7 +214,7 @@ parallel thread id will always begin counting from zero for a given
 parallelized block.
 
 Why would you want each thread to have a different number that is distinct
-from it's Perl-assigned thread id? The reason is that having such unique,
+from its Perl-assigned thread id? The reason is that having such unique,
 sequential, and normalized numbers makes it very easy for you to divide the
 work between the threads in a simple and predictable way. For example, in
 the code shown below, the bounds for the slice are calculated in a
