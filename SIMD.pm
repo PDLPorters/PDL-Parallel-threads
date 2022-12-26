@@ -490,7 +490,7 @@ Work on this module was originally inspired by work on
 L<PDL::Parallel::threads>, so you might want to check that out.
 
 Modules related to scientific parallel computing include
-L<PDL::Parallel::CPU>, L<Parallel::MPI>, L<Parallel::MPI::Simple>,
+L<PDL::ParallelCPU>, L<Parallel::MPI>, L<Parallel::MPI::Simple>,
 L<PDL::Parallel::MPI> and L<OpenCL>.
 
 Other modules provide alternative parallel computing frameworks. These may
