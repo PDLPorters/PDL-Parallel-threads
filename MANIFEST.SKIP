@@ -1,0 +1,13 @@
+^threads\.bs$
+^threads\.c$
+\.o$
+^threads\.pm$
+^threads\.xs$
+^blib/
+^\.git
+\.swp$
+MANIFEST.SKIP
+^MYMETA\.
+^META\.
+pm_to_blib
+Makefile
