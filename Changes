@@ -1,5 +1,6 @@
 - Bump minimum Perl to v5.14.0.
 - require PDL >= 2.058
+- fix longdouble test fail (#4) - thanks @andk for the report
 
 2022-02-13 0.04
 - update examples

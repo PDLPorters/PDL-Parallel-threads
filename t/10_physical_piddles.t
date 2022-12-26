@@ -78,8 +78,11 @@ threads->create(sub {
 		
 		# Have this thread touch one of the values, and have it double-check
 		# that the value is correctly set
-		$workspace($tid) .= sqrt($tid + 1) + sqrt(5);
-		my $to_test = pdl($workspace->type, sqrt($tid + 1) + sqrt(5));
+		my $tid_plus_1 = double($tid + 1);
+		my $five       = double(5);
+		$workspace($tid) .= pdl($workspace->type, $tid_plus_1->sqrt + $five->sqrt);
+		my $to_test = zeros($workspace->type, 1);
+		$to_test(0) .= pdl($workspace->type, $tid_plus_1->sqrt + $five->sqrt);
 		$success_hash{$type_letter}
 			= ($workspace->at($tid,0) == $to_test->at(0));
 	}
@@ -110,7 +113,7 @@ for my $type_letter (keys %workspaces) {
 	my $expected = zeroes($type, $N_threads, 2);
 	# Perform the arithmetic using double precision (on the right side of
 	# this asignment) before down-casting to the workspace's type
-	$expected .= (zeroes($N_threads, 2)->xvals + 1)->sqrt + sqrt(5);
+	$expected .= (zeroes($N_threads, 2)->xvals + 1)->sqrt + pdl(5)->sqrt;
 	# Perform an exact comparison. The operations may have high bit coverage,
 	# but they should also be free from bit noise, I hope.
 	ok(all($workspace == $expected), "Sharing $type piddles works")
