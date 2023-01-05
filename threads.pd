@@ -108,7 +108,7 @@ sub share_pdls {
 				croak("$to_croak you do not have permissions to read the "
 					. "associated header file") unless -r "$to_store.hdr";
 				croak("$to_croak you do not have write permissions for that "
-					. "file") if -w $to_store;
+					. "file") unless -w $to_store;
 				# Default: the file does not exist
 				croak("$to_croak the file does not exist");
 			}
