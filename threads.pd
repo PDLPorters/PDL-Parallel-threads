@@ -160,7 +160,7 @@ sub PDL::share_as {
 	return $self;
 }
 
-# Method to get an ndarray that points to the shared data assocaited with the
+# Method to get an ndarray that points to the shared data associated with the
 # given name(s).
 sub retrieve_pdls {
 	return if @_ == 0;
