@@ -320,7 +320,7 @@ wrap external data into ndarrays so you can manipulate them with PDL methods.
 For example, see L<PDL::Graphics::PLplot/plmap> and
 L<PDL::Graphics::PLplot/plmeridians>. These you cannot share directly, but
 making a physical copy with L<PDL::Core/copy> will give you
-something that you can safey share.
+something that you can safely share.
 
 =head2 Physical Memory
 
@@ -361,7 +361,7 @@ load C<PDL::Parallel::threads> before loading L<PDL::IO::FastRaw>:
  use PDL::Parallel::threads qw(retrieve_pdls);
 
 This is necessary because C<PDL::Parallel::threads> has to perform a few
-internal tweaks to L<PDL::IO::FastRaw> before you load its fuctions into
+internal tweaks to L<PDL::IO::FastRaw> before you load its functions into
 your local package.
 
 Furthermore, any memory mapped files B<must> have header files associated
@@ -862,7 +862,7 @@ _new_ndarray_around (datasv_pointer, datatype)
 		/* Tell the ndarray that it doesn't really own the data... */
 		PDL->add_deletedata_magic(p, default_magic, 0);
 
-		/* Increment the SV's reference count so the data persistents
+		/* Increment the SV's reference count so the data persists
 		 * as long as this ndarray is around. We'll take care of setting
 		 * the ndarray state later. */
 		SvREFCNT_inc((SV*)(p->datasv));
