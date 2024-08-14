@@ -237,10 +237,6 @@ __END__
 
 PDL::Parallel::threads - sharing PDL data between Perl threads
 
-=head1 VERSION
-
-This documentation describes version 0.04 of PDL::Parallel::threads.
-
 =head1 SYNOPSIS
 
  use PDL;
