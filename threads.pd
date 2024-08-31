@@ -84,6 +84,7 @@ sub share_pdls {
 				croak('share_pdls: Could not share an ndarray under '
 					. "name '$name' because $error");
 			}
+			_update_ndarray_data_state_flags($to_store); # protect its memory
 			if ($can_use_threads) {
 				$dim_arrays{$name} = shared_clone([$to_store->dims]);
 				$originating_tid{$name} = threads->tid;
@@ -180,16 +181,10 @@ sub retrieve_pdls {
 			}
 
 			# Create the new thinly wrapped ndarray
-			my $new_ndarray = _new_ndarray_around($datasv_pointers{$name},
-				$types{$name});
-
-			# Set the dimensions
-			my @dims = @{$dim_arrays{$name}};
-			$new_ndarray->setdims(\@dims);
-
-			# Set flags to protect the ndarray's memory:
-			_update_ndarray_data_state_flags($new_ndarray);
-
+			my $new_ndarray = _new_ndarray_around($datasv_pointers{$name});
+			$new_ndarray->set_datatype($types{$name});
+			$new_ndarray->setdims(\@{$dim_arrays{$name}});
+			_update_ndarray_data_state_flags($new_ndarray); # protect its memory
 			push @to_return, $new_ndarray;
 		}
 		elsif (exists $file_names{$name}) {
@@ -812,10 +807,6 @@ _get_and_mark_datasv_pointer (p)
 		}
 		/* Increment the datasv's refcount */
 		SvREFCNT_inc((SV*)(p->datasv));
-
-		/* Tell this ndarray to no longer manage its memory */
-		p->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
-
 		/* return the pointer */
 		RETVAL = (size_t)(p->datasv);
 	OUTPUT:
@@ -828,26 +819,18 @@ _get_and_mark_datasv_pointer (p)
 # method is called, as well as the proper flag setting, makes the ndarray a
 # very thin clone of the original ndarray.
 pdl *
-_new_ndarray_around (datasv_pointer, datatype)
+_new_ndarray_around (datasv_pointer)
 	size_t datasv_pointer
-	int datatype
 	CODE:
 		/* Create a new ndarray container */
-		pdl * p = PDL->pdlnew();
-
+		RETVAL = PDL->pdlnew();
 		/* set the datasv to what was supplied */
-		p->datasv = (void*) datasv_pointer;
-		p->data = (void*) SvPV_nolen((SV*)(datasv_pointer));
-
-		/* Set the datatype to that supplied */
-		p->datatype = datatype;
-
+		RETVAL->datasv = (void*)datasv_pointer;
+		RETVAL->data = SvPV_nolen((SV*)datasv_pointer);
 		/* Increment the SV's reference count so the data persists
 		 * as long as this ndarray is around. We'll take care of setting
 		 * the ndarray state later. */
-		SvREFCNT_inc((SV*)(p->datasv));
-
-		RETVAL = p;
+		SvREFCNT_inc((SV*)(RETVAL->datasv));
 	OUTPUT:
 		RETVAL
 
