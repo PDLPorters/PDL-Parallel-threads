@@ -1,13 +1,14 @@
 use strict;
 use warnings;
 
-use Test::More tests => 8;
+use Test::More;
 
 use PDL;
 use PDL::Parallel::threads qw(retrieve_pdls free_pdls);
 
-# Make it easier to use this darn function
-*data_count = \&PDL::Parallel::threads::__get_pdl_datasv_ref_count;
+sub data_count {
+  PDL::Parallel::threads::_sv_refcount(PDL::Parallel::threads::_get_datasv_pointer(@_));
+}
 
 my $data = sequence(20);
 is(data_count($data), 1, "Data's initial refcount for normal ndarray is 1");
@@ -37,3 +38,5 @@ is(data_count($shallow), 2, "Getting rid of original does not destroy the data")
 
 free_pdls('foo');
 is(data_count($shallow), 1, "Freeing memory only decrements refcount by one");
+
+done_testing;

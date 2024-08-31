@@ -76,7 +76,7 @@ sub share_pdls {
 
 		if ( eval{$to_store->isa("PDL")} ) {
 			# Share ndarray memory directly
-			$datasv_pointers{$name} = eval{_get_and_mark_datasv_pointer($to_store)};
+			$datasv_pointers{$name} = eval{_get_datasv_pointer($to_store)};
 			if ($@) {
 				my $error = $@;
 				chomp $error;
@@ -84,6 +84,7 @@ sub share_pdls {
 				croak('share_pdls: Could not share an ndarray under '
 					. "name '$name' because $error");
 			}
+			_sv_refcount_inc($datasv_pointers{$name});
 			_update_ndarray_data_state_flags($to_store); # protect its memory
 			if ($can_use_threads) {
 				$dim_arrays{$name} = shared_clone([$to_store->dims]);
@@ -133,7 +134,7 @@ sub free_pdls {
 
 		# If it's a regular ndarray, decrement the memory's refcount
 		if (exists $datasv_pointers{$name}) {
-			_dec_datasv_refcount($datasv_pointers{$name});
+			_sv_refcount_dec($datasv_pointers{$name});
 			delete $datasv_pointers{$name};
 			delete $dim_arrays{$name};
 			delete $types{$name};
@@ -182,6 +183,7 @@ sub retrieve_pdls {
 
 			# Create the new thinly wrapped ndarray
 			my $new_ndarray = _new_ndarray_around($datasv_pointers{$name});
+			_sv_refcount_inc($datasv_pointers{$name});
 			$new_ndarray->set_datatype($types{$name});
 			$new_ndarray->setdims(\@{$dim_arrays{$name}});
 			_update_ndarray_data_state_flags($new_ndarray); # protect its memory
@@ -787,53 +789,39 @@ pp_addxs(<<'EOF');
 # the pointer to the datasv for the incoming ndarray, and it increments the
 # SV's refcount.
 size_t
-_get_and_mark_datasv_pointer (p)
-	pdl * p
-	CODE:
-		if (p->trans_parent) {
-			croak("the ndarray is a slice.\n"); /* Slice, data flow, etc */
-		}
-		if (0 == (p->state & PDL_ALLOCATED)) {
-			croak("the ndarray does not have any allocated memory (but is "
-				"not a slice?).\n"); /* Not sure how this happens */
-		}
-		if (p->datasv == 0) {
-			croak("the ndarray has no datasv, which means it's probably "
-				"a special ndarray.\n"); /* PLplot, mapped with flexraw */
-		}
-		if (p->data != (void*)SvPV_nolen((SV*)(p->datasv))) {
-			croak("the ndarray's data does not come from the datasv.\n");
-			/* Not sure how this happens. */
-		}
-		/* Increment the datasv's refcount */
-		SvREFCNT_inc((SV*)(p->datasv));
-		/* return the pointer */
-		RETVAL = (size_t)(p->datasv);
-	OUTPUT:
-		RETVAL
+_get_datasv_pointer(p)
+  pdl * p
+  CODE:
+    if (p->trans_parent)
+      croak("the ndarray is a slice.\n"); /* Slice, data flow, etc */
+    if (!(p->state & PDL_ALLOCATED))
+      croak("the ndarray does not have any allocated memory (but is "
+            "not a slice?).\n"); /* Not sure how this happens */
+    if (p->datasv == 0)
+      croak("the ndarray has no datasv, which means it's probably "
+            "a special ndarray.\n"); /* PLplot, mapped with flexraw */
+    if (p->data != (void*)SvPV_nolen((SV*)(p->datasv)))
+      croak("the ndarray's data does not come from the datasv.\n");
+    RETVAL = (size_t)(p->datasv);
+  OUTPUT:
+    RETVAL
 
-
-# Given a pointer value that was retrieved with _get_and_mark_datasv_pointer,
+# Given a pointer value that was retrieved with _get_datasv_pointer,
 # this method creates a new ndarray and sets the ndarray's datasv to the
 # provided location. Combined with proper dim/datatype munging after this
 # method is called, as well as the proper flag setting, makes the ndarray a
 # very thin clone of the original ndarray.
 pdl *
-_new_ndarray_around (datasv_pointer)
-	size_t datasv_pointer
-	CODE:
-		/* Create a new ndarray container */
-		RETVAL = PDL->pdlnew();
-		/* set the datasv to what was supplied */
-		RETVAL->datasv = (void*)datasv_pointer;
-		RETVAL->data = SvPV_nolen((SV*)datasv_pointer);
-		/* Increment the SV's reference count so the data persists
-		 * as long as this ndarray is around. We'll take care of setting
-		 * the ndarray state later. */
-		SvREFCNT_inc((SV*)(RETVAL->datasv));
-	OUTPUT:
-		RETVAL
-
+_new_ndarray_around(datasv_pointer)
+  size_t datasv_pointer
+  CODE:
+    /* Create a new ndarray container */
+    RETVAL = PDL->pdlnew();
+    /* set the datasv to what was supplied */
+    RETVAL->datasv = (void*)datasv_pointer;
+    RETVAL->data = SvPV_nolen((SV*)datasv_pointer);
+  OUTPUT:
+    RETVAL
 
 void
 _update_ndarray_data_state_flags (p)
@@ -842,21 +830,25 @@ _update_ndarray_data_state_flags (p)
 		/* Tell the ndarray that it doesn't really own the data... */
 		p->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
 
-# Needed in the data removal section
 void
-_dec_datasv_refcount (datasv_pointer)
-	size_t datasv_pointer
-	CODE:
-		SvREFCNT_dec((SV*)(datasv_pointer));
+_sv_refcount_inc(sv_pointer)
+  size_t sv_pointer
+  CODE:
+    SvREFCNT_inc((SV*)(sv_pointer));
 
-# Super-internal function, used for testing
-int
-__get_pdl_datasv_ref_count (p)
-	pdl * p
-	CODE:
-		RETVAL = !p->datasv ? -1 : SvREFCNT((SV*)(p->datasv));
-	OUTPUT:
-		RETVAL
+void
+_sv_refcount_dec(sv_pointer)
+  size_t sv_pointer
+  CODE:
+    SvREFCNT_dec((SV*)(sv_pointer));
+
+IV
+_sv_refcount(sv_pointer)
+  size_t sv_pointer
+  CODE:
+    RETVAL = SvREFCNT((SV*)sv_pointer);
+  OUTPUT:
+    RETVAL
 EOF
 
 pp_done;
