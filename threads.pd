@@ -32,6 +32,7 @@ BEGIN {
 my %datasv_pointers :shared;
 my %dim_arrays :shared;
 my %types :shared;
+my %nbytes :shared;
 my %originating_tid :shared;
 my %file_names :shared;
 
@@ -85,7 +86,7 @@ sub share_pdls {
 					. "name '$name' because $error");
 			}
 			_sv_refcount_inc($datasv_pointers{$name});
-			_update_ndarray_data_state_flags($to_store); # protect its memory
+			$to_store->set_donttouchdata($nbytes{$name} = $to_store->nbytes); # protect its memory
 			if ($can_use_threads) {
 				$dim_arrays{$name} = shared_clone([$to_store->dims]);
 				$originating_tid{$name} = threads->tid;
@@ -138,6 +139,7 @@ sub free_pdls {
 			delete $datasv_pointers{$name};
 			delete $dim_arrays{$name};
 			delete $types{$name};
+			delete $nbytes{$name};
 			delete $originating_tid{$name};
 			push @removed, $name;
 		}
@@ -186,7 +188,7 @@ sub retrieve_pdls {
 			_sv_refcount_inc($datasv_pointers{$name});
 			$new_ndarray->set_datatype($types{$name});
 			$new_ndarray->setdims(\@{$dim_arrays{$name}});
-			_update_ndarray_data_state_flags($new_ndarray); # protect its memory
+			$new_ndarray->set_donttouchdata($nbytes{$name}); # protect its memory
 			push @to_return, $new_ndarray;
 		}
 		elsif (exists $file_names{$name}) {
@@ -822,13 +824,6 @@ _new_ndarray_around(datasv_pointer)
     RETVAL->data = SvPV_nolen((SV*)datasv_pointer);
   OUTPUT:
     RETVAL
-
-void
-_update_ndarray_data_state_flags (p)
-	pdl * p
-	CODE:
-		/* Tell the ndarray that it doesn't really own the data... */
-		p->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
 
 void
 _sv_refcount_inc(sv_pointer)

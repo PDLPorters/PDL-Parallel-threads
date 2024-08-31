@@ -12,11 +12,11 @@ WriteMakefile(
 	LICENSE  => 'perl',
 	MIN_PERL_VERSION => '5.14.0',
 	CONFIGURE_REQUIRES => {
-		PDL             => '2.058', # trans_parent
+		PDL             => '2.069', # nbytes method
 		'ExtUtils::MakeMaker' => '7.14',
 	},
 	PREREQ_PM => {
-		'PDL'             => '2.058',
+		'PDL'             => '2.069',
 		'threads::shared' => '1.21',   # shared_clone
 	},
 	TEST_REQUIRES => {
