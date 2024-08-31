@@ -786,17 +786,6 @@ POSSIBILITY OF SUCH DAMAGES.
 =cut
 EOF
 
-pp_addhdr(<<'EOF');
-static void default_magic (pdl *p, size_t pa) {
-	/* Handle the reference counting by hand, thus allowing Perl to handle
-	 * the SV cleanup; zero the ndarray's pointer so it doesn't touch the
-	 * SV late in the ndarray's cleanup stage. */
-	SvREFCNT_dec((SV*)(p->datasv));
-	p->datasv = 0;
-	p->data = 0;
-}
-EOF
-
 pp_addxs(<<'EOF');
 # Integers (which can be cast to and from pointers) are easily shared using
 # threads::shared in a shared hash. This method provides a way to obtain
@@ -826,7 +815,6 @@ _get_and_mark_datasv_pointer (p)
 
 		/* Tell this ndarray to no longer manage its memory */
 		p->state |= PDL_DONTTOUCHDATA | PDL_ALLOCATED;
-		PDL->add_deletedata_magic(p, default_magic, 0);
 
 		/* return the pointer */
 		RETVAL = (size_t)(p->datasv);
@@ -853,10 +841,6 @@ _new_ndarray_around (datasv_pointer, datatype)
 
 		/* Set the datatype to that supplied */
 		p->datatype = datatype;
-
-
-		/* Tell the ndarray that it doesn't really own the data... */
-		PDL->add_deletedata_magic(p, default_magic, 0);
 
 		/* Increment the SV's reference count so the data persists
 		 * as long as this ndarray is around. We'll take care of setting
