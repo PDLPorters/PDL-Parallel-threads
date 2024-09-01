@@ -77,7 +77,11 @@ sub share_pdls {
 
 		if ( eval{$to_store->isa("PDL")} ) {
 			# Share ndarray memory directly
-			$datasv_pointers{$name} = eval{_get_datasv_pointer($to_store)};
+			$datasv_pointers{$name} = eval{
+			  croak("the ndarray does not have any allocated memory\n")
+			    if !$to_store->allocated;
+			  _get_datasv_pointer($to_store);
+			};
 			if ($@) {
 				my $error = $@;
 				chomp $error;
@@ -308,9 +312,10 @@ an ndarray that is based on actual I<physical memory>, such as the result of
 L<PDL::Core/zeroes>. You can also share data using I<memory mapped> files.
 (Note: PDL v2.4.11 and higher support memory mapped ndarrays on all major
 platforms, including Windows.) There are other sorts of ndarrays whose data
-you cannot share. You cannot directly share slices (though a simple
-L<PDL::Core/sever> or L<PDL::Core/copy> will give you an
-ndarray based on physical memory that you can share). Also, certain functions
+you cannot share. You cannot directly share ndarrays that have not
+been physicalised, though a simple L<PDL::Core/make_physical>,
+L<PDL::Core/sever>, or L<PDL::Core/copy> will give you an ndarray
+based on physical memory that you can share. Also, certain functions
 wrap external data into ndarrays so you can manipulate them with PDL methods.
 For example, see L<PDL::Graphics::PLplot/plmap> and
 L<PDL::Graphics::PLplot/plmeridians>. These you cannot share directly, but
@@ -627,17 +632,9 @@ the name internally for you.
 
 =over
 
-=item C<< ... the ndarray is a slice. >>
-
-You tried to share a slice, which is not allowed. Try C<sever>ing or
-C<copy>ing your slice, then share it.
-
-=item C<< ... the ndarray does not have any allocated memory (but is not a
-slice?). >>
+=item C<< ... the ndarray does not have any allocated memory. >>
 
 You tried to share an ndarray that does not have any memory associated with it.
-I'm actually not sure how you can do this, so if you managed to create such
-an ndarray, you probably already know what's going on. :-)
 
 =item C<< ... the ndarray has no datasv, which means it's probably a special
 ndarray. >>
@@ -794,11 +791,6 @@ size_t
 _get_datasv_pointer(p)
   pdl * p
   CODE:
-    if (p->trans_parent)
-      croak("the ndarray is a slice.\n"); /* Slice, data flow, etc */
-    if (!(p->state & PDL_ALLOCATED))
-      croak("the ndarray does not have any allocated memory (but is "
-            "not a slice?).\n"); /* Not sure how this happens */
     if (p->datasv == 0)
       croak("the ndarray has no datasv, which means it's probably "
             "a special ndarray.\n"); /* PLplot, mapped with flexraw */
