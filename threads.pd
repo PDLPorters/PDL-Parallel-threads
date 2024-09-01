@@ -187,7 +187,6 @@ sub retrieve_pdls {
 
 			# Create the new thinly wrapped ndarray
 			my $new_ndarray = _new_ndarray_around($datasv_pointers{$name});
-			_sv_refcount_inc($datasv_pointers{$name});
 			$new_ndarray->set_datatype($types{$name});
 			$new_ndarray->setdims(\@{$dim_arrays{$name}});
 			$new_ndarray->set_donttouchdata($nbytes{$name}); # protect its memory
@@ -794,15 +793,10 @@ _new_ndarray_around(datasv_pointer)
     RETVAL = PDL->pdlnew();
     /* set the datasv to what was supplied */
     RETVAL->datasv = (void*)datasv_pointer;
+    SvREFCNT_inc((SV*)(datasv_pointer));
     RETVAL->data = SvPV_nolen((SV*)datasv_pointer);
   OUTPUT:
     RETVAL
-
-void
-_sv_refcount_inc(sv_pointer)
-  size_t sv_pointer
-  CODE:
-    SvREFCNT_inc((SV*)(sv_pointer));
 
 IV
 _datasv_refcount(p)
