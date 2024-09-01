@@ -709,11 +709,7 @@ but you called the function in scalar context. Why do such a thing?
 
 =head1 LIMITATIONS
 
-I have tried to make it clear, but in case you missed it, this module does
-not let you share slices or specially marked ndarrays. If you need to share a
-slice, you should C<sever> or C<copy> the slice first.
-
-Another limitation is that you cannot share memory mapped files that require
+You cannot share memory mapped files that require
 features of L<PDL::IO::FlexRaw>. That is a cool module that lets you pack
 multiple ndarrays into a single file, but simple cross-thread sharing is not
 trivial and is not (yet) supported.
