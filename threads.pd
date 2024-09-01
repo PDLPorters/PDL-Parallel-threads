@@ -802,6 +802,7 @@ IV
 _datasv_refcount(p)
   pdl *p
   CODE:
+    if (!p->datasv) croak("NULL datasv");
     RETVAL = SvREFCNT((SV*)p->datasv);
   OUTPUT:
     RETVAL
