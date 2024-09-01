@@ -30,6 +30,7 @@ BEGIN {
 # of scalars, scalars whose integer values are the pointers to ndarray data,
 # etc.
 my %datasv_pointers :shared;
+my %dataref_svs;
 my %dim_arrays :shared;
 my %types :shared;
 my %nbytes :shared;
@@ -68,11 +69,16 @@ sub share_pdls {
 		}
 
 		if ( eval{$to_store->isa("PDL")} ) {
-			# Share ndarray memory directly
-			$datasv_pointers{$name} = eval{
+			# Integers (which can be cast to and from
+			# pointers) are easily shared using threads::shared
+			# in a shared hash. This method provides a
+			# way to obtain the pointer to the datasv for
+			# the incoming ndarray, and it increments the
+			# SV's refcount.
+			$dataref_svs{$name} = eval{
 			  croak("the ndarray does not have any allocated memory\n")
 			    if !$to_store->allocated;
-			  _get_datasv_pointer($to_store);
+			  $to_store->get_dataref;
 			};
 			if ($@) {
 				my $error = $@;
@@ -81,7 +87,7 @@ sub share_pdls {
 				croak('share_pdls: Could not share an ndarray under '
 					. "name '$name' because $error");
 			}
-			_sv_refcount_inc($datasv_pointers{$name});
+			$datasv_pointers{$name} = 0+$dataref_svs{$name};
 			$to_store->set_donttouchdata($nbytes{$name} = $to_store->nbytes); # protect its memory
 			if ($can_use_threads) {
 				$dim_arrays{$name} = shared_clone([$to_store->dims]);
@@ -131,7 +137,7 @@ sub free_pdls {
 
 		# If it's a regular ndarray, decrement the memory's refcount
 		if (exists $datasv_pointers{$name}) {
-			_sv_refcount_dec($datasv_pointers{$name});
+			delete $dataref_svs{$name};
 			delete $datasv_pointers{$name};
 			delete $dim_arrays{$name};
 			delete $types{$name};
@@ -775,23 +781,6 @@ POSSIBILITY OF SUCH DAMAGES.
 EOF
 
 pp_addxs(<<'EOF');
-# Integers (which can be cast to and from pointers) are easily shared using
-# threads::shared in a shared hash. This method provides a way to obtain
-# the pointer to the datasv for the incoming ndarray, and it increments the
-# SV's refcount.
-size_t
-_get_datasv_pointer(p)
-  pdl * p
-  CODE:
-    if (p->datasv == 0)
-      croak("the ndarray has no datasv, which means it's probably "
-            "a special ndarray.\n"); /* PLplot, mapped with flexraw */
-    if (p->data != (void*)SvPV_nolen((SV*)(p->datasv)))
-      croak("the ndarray's data does not come from the datasv.\n");
-    RETVAL = (size_t)(p->datasv);
-  OUTPUT:
-    RETVAL
-
 # Given a pointer value that was retrieved with _get_datasv_pointer,
 # this method creates a new ndarray and sets the ndarray's datasv to the
 # provided location. Combined with proper dim/datatype munging after this
@@ -815,17 +804,11 @@ _sv_refcount_inc(sv_pointer)
   CODE:
     SvREFCNT_inc((SV*)(sv_pointer));
 
-void
-_sv_refcount_dec(sv_pointer)
-  size_t sv_pointer
-  CODE:
-    SvREFCNT_dec((SV*)(sv_pointer));
-
 IV
-_sv_refcount(sv_pointer)
-  size_t sv_pointer
+_datasv_refcount(p)
+  pdl *p
   CODE:
-    RETVAL = SvREFCNT((SV*)sv_pointer);
+    RETVAL = SvREFCNT((SV*)p->datasv);
   OUTPUT:
     RETVAL
 EOF

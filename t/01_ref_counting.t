@@ -6,9 +6,7 @@ use Test::More;
 use PDL;
 use PDL::Parallel::threads qw(retrieve_pdls free_pdls);
 
-sub data_count {
-  PDL::Parallel::threads::_sv_refcount(PDL::Parallel::threads::_get_datasv_pointer(@_));
-}
+*data_count = \&PDL::Parallel::threads::_datasv_refcount;
 
 my $data = sequence(20);
 is(data_count($data), 1, "Data's initial refcount for normal ndarray is 1");
