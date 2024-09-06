@@ -5,7 +5,7 @@ use warnings;
 use Carp;
 use PDL;
 use PDL::Exporter;
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 our @ISA = ( 'PDL::Exporter' );
 our @EXPORT_OK = qw(share_pdls retrieve_pdls free_pdls);
