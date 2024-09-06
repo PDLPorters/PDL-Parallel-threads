@@ -1,11 +1,11 @@
 Changes
-Makefile.PL
 examples/barrier-sync.pl
 examples/perl-barrier.pl
 examples/simple-parallelize.pl
 examples/test-memory-consumption.pl
-threads.pd
-SIMD.pm
+lib/PDL/Parallel/threads.pm
+lib/PDL/Parallel/threads/SIMD.pm
+Makefile.PL
 MANIFEST			This list of files
 README.pod
 t/00-load.t

@@ -1,10 +1,7 @@
 blib/
-.build/
-_build/
 cover_db/
+_eumm/
 inc/
-Build
-Build.bat
 .last_cover_stats
 Makefile
 Makefile.old
@@ -13,9 +10,4 @@ META.yml
 MYMETA.yml
 nytprof.out
 pm_to_blib
-*.c
-*.o
 *.json
-threads.bs
-threads.pm
-threads.xs

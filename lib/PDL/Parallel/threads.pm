@@ -1,18 +1,15 @@
-use strict;
-use warnings;
-
-our $VERSION = '0.05';
-pp_setversion($VERSION);
-
-pp_add_exported('share_pdls retrieve_pdls free_pdls');
-pp_addpm( {At => 'Top'}, <<'EOF' );
 package PDL::Parallel::threads;
 
 use strict;
 use warnings;
 use Carp;
 use PDL;
-use PDL::IO::FastRaw;
+use PDL::Exporter;
+our $VERSION = '0.05';
+
+our @ISA = ( 'PDL::Exporter' );
+our @EXPORT_OK = qw(share_pdls retrieve_pdls free_pdls);
+our %EXPORT_TAGS = (Func=>\@EXPORT_OK);
 
 my $can_use_threads;
 BEGIN {
@@ -186,7 +183,7 @@ sub retrieve_pdls {
 			}
 
 			# Create the new thinly wrapped ndarray
-			my $new_ndarray = _new_ndarray_around($datasv_pointers{$name});
+			my $new_ndarray = PDL->new_around_datasv($datasv_pointers{$name});
 			$new_ndarray->set_datatype($types{$name});
 			$new_ndarray->setdims(\@{$dim_arrays{$name}});
 			$new_ndarray->set_donttouchdata($nbytes{$name}); # protect its memory
@@ -219,6 +216,7 @@ sub retrieve_pdls {
 # memory mapped and standard ndarrays.
 
 {
+	use PDL::IO::FastRaw;
 	no warnings 'redefine';
 	my $old_sub = \&PDL::IO::FastRaw::mapfraw;
 	*PDL::IO::FastRaw::mapfraw = sub {
@@ -605,9 +603,7 @@ can handle trouble with perl C<grep>s and other conditionals:
 This function simply removes an ndarray's memory from the shared pool. It
 does not interact with bad values in any way. But then again, it does not
 interfere with or screw up bad values, either.
-EOF
 
-pp_addpm( {At => 'Bot'}, <<'EOF' );
 =head1 DIAGNOSTICS
 
 =over
@@ -773,35 +769,3 @@ SOFTWARE), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGES.
 
 =cut
-EOF
-
-pp_addxs(<<'EOF');
-# Given a pointer value that was retrieved with _get_datasv_pointer,
-# this method creates a new ndarray and sets the ndarray's datasv to the
-# provided location. Combined with proper dim/datatype munging after this
-# method is called, as well as the proper flag setting, makes the ndarray a
-# very thin clone of the original ndarray.
-pdl *
-_new_ndarray_around(datasv_pointer)
-  size_t datasv_pointer
-  CODE:
-    /* Create a new ndarray container */
-    RETVAL = PDL->pdlnew();
-    /* set the datasv to what was supplied */
-    RETVAL->datasv = (void*)datasv_pointer;
-    SvREFCNT_inc((SV*)(datasv_pointer));
-    RETVAL->data = SvPV_nolen((SV*)datasv_pointer);
-  OUTPUT:
-    RETVAL
-
-IV
-_datasv_refcount(p)
-  pdl *p
-  CODE:
-    if (!p->datasv) croak("NULL datasv");
-    RETVAL = SvREFCNT((SV*)p->datasv);
-  OUTPUT:
-    RETVAL
-EOF
-
-pp_done;
