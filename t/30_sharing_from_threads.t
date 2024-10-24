@@ -23,12 +23,16 @@ use PDL::Parallel::threads::SIMD qw(parallelize parallel_id parallel_sync);
 my $N_threads = 5;
 my @data_is_correct : shared;
 my @could_get_data : shared;
+my @bad_is_correct : shared;
 parallelize {
 	my $pid = parallel_id;
 
 	# Create data that is unique to this thread
 	my $pdl = ones(10) * $pid;
 	$pdl->share_as("data$pid");
+	my $bad = ones(5);
+	$bad->setbadat(2);
+	$bad->share_as("bad$pid");
 
 	# We will get the data from the *previous* thread (modulo the number of
 	# threads, of course: circular boundary conditions)
@@ -49,11 +53,16 @@ parallelize {
 		$data_is_correct[$pid] = all($to_test == $thread_to_grab)->sclr
 			or diag("For thread $pid, expected ${thread_to_grab}s but got $to_test");
 
+		$to_test = retrieve_pdls("bad$thread_to_grab");
+		my $isbad = $to_test->isbad;
+		$bad_is_correct[$pid] = all($isbad == pdl(0,0,1,0,0))->sclr || diag "got=$isbad";
+
 		1;
 	} or do {
 		diag("data pull for pid $pid failed: $@");
 		$could_get_data[$pid] = 0;
 		$data_is_correct[$pid] = 0;
+		$bad_is_correct[$pid] = 0;
 	};
 
 } $N_threads;
@@ -65,6 +74,9 @@ is_deeply(\@could_get_data, \@expected,
 is_deeply(\@data_is_correct, \@expected,
 	'Data created by sibling threads worked correctly')
 	or diag("expected all 1s, actually got @data_is_correct");
+is_deeply(\@bad_is_correct, \@expected,
+	'Data created by sibling threads badflags survived correctly')
+	or diag("expected all 1s, actually got @data_is_correct");
 
 # Make sure the retrieval causes a croak
 for (1..$N_threads-1) {
@@ -73,7 +85,5 @@ for (1..$N_threads-1) {
 	} qr/was created in a thread that has ended or is detached/
 	, "Retrieving shared data created by already-terminated thread $_ croaks";
 }
-
-
 
 done_testing();
