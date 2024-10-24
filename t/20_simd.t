@@ -41,12 +41,12 @@ parallelize {
 	# Get the pid and log the presence
 	my $pid = parallel_id;
 	$pids[$pid] = 1;
-	
+
 	$workspace[$pid] = $pid + 1;
-	
+
 	# First barrier sync: make sure everybody has updated workspace
 	parallel_sync;
-	
+
 	# Make sure that the previosu pid set the correct value before we reached
 	# this point.
 	my $pid_to_check = $pid - 1;
@@ -54,21 +54,21 @@ parallelize {
 	$after_first_block[$pid] = 1;
 	$after_first_block[$pid] = 0
 		if $workspace[$pid_to_check] != $pid_to_check + 1;
-	
+
 	# Update the workspace value
 	$workspace[$pid_to_check] = -$pid;
-	
+
 	# Second barrier sync: make sure we could perform the first check and
 	# the assignment
 	parallel_sync;
-	
+
 	# Make sure that the newly changed value, from the other thread, is
 	# correct here.
 	$pid_to_check = $pid + 1;
 	$pid_to_check = 0 if $pid_to_check == $N_threads;
 	$after_second_block[$pid] = 1;
 	$after_second_block[$pid] = 0 if $workspace[$pid] != -$pid_to_check;
-	
+
 	# Check recursive parallelized block
 	eval {
 		parallelize {
@@ -78,7 +78,7 @@ parallelize {
 	} or do {
 		$recursive_simd_allowed[$pid] = 0;
 	};
-	
+
 } $N_threads;
 
 my @expected = (1) x $N_threads;

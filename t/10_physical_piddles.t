@@ -26,17 +26,17 @@ use PDL::Parallel::threads qw(retrieve_pdls);
 # Here we allocate shared work space for each PDL data type. We then create
 # a collection of threads and have each thread modify the contents of one
 # part of the shared memory.
-# 
+#
 # While there, each thread does a number of things. It sets a value in the
 # shared memory, it confirms that the now-set value is correct, and it
 # builds the hash of expected values from such checks. That last part need
 # not be done in the threads explicitly, but it makes it easier to write. :-)
-# 
+#
 # After all the threads return, we check that all the values agree with what
 # we expect, which is fairly easy (though not entirely trivial) to construct
 # by hand. I encorporate square-roots into the calculations to ensure good
 # bit coverage of the tests, at least for the floating point numbers.
-# 
+#
 # The last step simply confirms that sharing slices croaks, a pretty easy
 # pair of tests.
 
@@ -68,14 +68,14 @@ my @success : shared;
 my @expected : shared;
 threads->create(sub {
 	my $tid = shift;
-	
+
 	my (%expected_hash, %success_hash, %bits_hash);
 	for my $type_letter (keys %workspaces) {
 		my $workspace = retrieve_pdls("workspace_$type_letter");
-		
+
 		# Build this up one thread at a time
 		$expected_hash{$type_letter} = 1;
-		
+
 		# Have this thread touch one of the values, and have it double-check
 		# that the value is correctly set
 		my $tid_plus_1 = double($tid + 1);
@@ -86,11 +86,11 @@ threads->create(sub {
 		$success_hash{$type_letter}
 			= ($workspace->at($tid,0) == $to_test->at(0));
 	}
-	
+
 	# Make sure the results for each type have a space in shared memory
 	$expected[$tid] = shared_clone(\%expected_hash);
 	$success[$tid] = shared_clone(\%success_hash);
-	
+
 }, $_) for 0..$N_threads-1;
 
 # Reap the threads

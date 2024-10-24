@@ -25,37 +25,37 @@ my @data_is_correct : shared;
 my @could_get_data : shared;
 parallelize {
 	my $pid = parallel_id;
-	
+
 	# Create data that is unique to this thread
 	my $pdl = ones(10) * $pid;
 	$pdl->share_as("data$pid");
-	
+
 	# We will get the data from the *previous* thread (modulo the number of
 	# threads, of course: circular boundary conditions)
 	my $thread_to_grab = $pid - 1;
 	$thread_to_grab = $N_threads - 1 if $pid == 0;
-	
+
 	# Synchronize; make sure all the threads have had a chance to create
 	# their data
 	parallel_sync;
-	
+
 	# This should be in an eval block in case the data pull fails
 	eval {
 		# Pull in the data:
 		my $to_test = retrieve_pdls("data$thread_to_grab");
 		$could_get_data[$pid] = 1;
-		
+
 		# Make sure it's what we expected
 		$data_is_correct[$pid] = all($to_test == $thread_to_grab)->sclr
 			or diag("For thread $pid, expected ${thread_to_grab}s but got $to_test");
-		
+
 		1;
 	} or do {
 		diag("data pull for pid $pid failed: $@");
 		$could_get_data[$pid] = 0;
 		$data_is_correct[$pid] = 0;
 	};
-	
+
 } $N_threads;
 
 my @expected = (1) x $N_threads;
@@ -69,7 +69,7 @@ is_deeply(\@data_is_correct, \@expected,
 # Make sure the retrieval causes a croak
 for (1..$N_threads-1) {
 	throws_ok {
-		retrieve_pdls("data$_") 
+		retrieve_pdls("data$_")
 	} qr/was created in a thread that has ended or is detached/
 	, "Retrieving shared data created by already-terminated thread $_ croaks";
 }

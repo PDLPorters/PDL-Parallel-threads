@@ -29,7 +29,7 @@ is_deeply([$to_compare->dims], [$data->dims], 'Retrieved dims is correct')
 		. " and retrieved dims are " . join', ', $to_compare->dims);
 
 ok($data->type == $to_compare->type, 'Retrieved type is correct')
-	or diag("Original type is " . $data->type 
+	or diag("Original type is " . $data->type
 		. " and retrieved type is " . $to_compare->type);
 
 ok(all($to_compare == $data), 'Retrieved value exactly equals original')

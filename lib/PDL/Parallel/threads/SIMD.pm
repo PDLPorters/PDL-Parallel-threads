@@ -29,13 +29,13 @@ sub parallel_sync () {
 		carp("Cannot call parallel_sync outside of a parallelized block");
 		return;
 	}
-	
+
 	yield until $barrier_state eq 'ready' or $barrier_state eq 'up';
-	
+
 	lock($barrier_count);
 	$barrier_state = 'up';
 	$barrier_count++;
-	
+
 	if ($barrier_count == $N_threads) {
 		$barrier_count--;
 		$barrier_state = 'down';
@@ -83,14 +83,14 @@ sub parallelize (&$) {
 	local $N_threads = $requested_threads;
 #	local $barrier_count = 0;
 #	local $barrier_state = 'ready';
-	
+
 	# Launch N-1 threads...
 	my @to_join = map {
 		threads->create(\&run_it, $_, $sub)
 	} (1..$N_threads-1);
 	# ... and execute the last thread in this, the main thread
 	run_it(0, $sub);
-	
+
 	# Reap the threads
 	for my $thr (@to_join) {
 		$thr->join;
@@ -113,15 +113,15 @@ This documentation describes version 0.02 of PDL::Parallel::threads::SIMD.
 =head1 SYNOPSIS
 
  use PDL::Parallel::threads::SIMD qw(parallelize parallel_sync parallel_id);
- 
+
  # Launch five threads that all print a statement
  parallelize {
    my $pid = parallel_id;
    print "Hello from parallel thread $pid\n";
  } 5;
- 
+
  my @positions :shared;
- 
+
  # Run 47 time steps, performing the calculations
  # for the time steps in parallel
  my $size = 100;
@@ -129,16 +129,16 @@ This documentation describes version 0.02 of PDL::Parallel::threads::SIMD.
  my $stride = $size / $N_threads;
  parallelize {
    my $pid = parallel_id;
-   
+
    # Set this thread's portion of the positions to zero
    my $start = $stride * $pid;
    my $end = $start + $stride - 1;
    @positions[$start..$end] = (0) x $stride;
-   
+
    for (1..47) {
      # First make sure all the threads are lined up
      parallel_sync;
-     
+
      # Now calculate the next positions
      $positions[$_] += $velocities[$_] for $start .. $end;
    }
@@ -218,45 +218,45 @@ from its Perl-assigned thread id? The reason is that having such unique,
 sequential, and normalized numbers makes it very easy for you to divide the
 work between the threads in a simple and predictable way. For example, in
 the code shown below, the bounds for the slice are calculated in a
-thread-specific fashion based on the parallel thread id. 
+thread-specific fashion based on the parallel thread id.
 
  use PDL;
  use PDL::Parallel::threads;
  use PDL::Parallel::threads:SIMD qw(parallelize parallel);
  use PDL::NiceSlice;
- 
+
  # Load the data with 7 million elements into $to_sum...
  # ...
  # Share it.
  $to_sum->share_as('to-sum');
- 
+
  # Also allocate some shared, temproary memory:
  my $N_threads = 10;
  zeroes($N_threads)->share_as('workspace');
- 
+
  my $stride = $to_sum->nelem / $N_threads;
- 
+
  # Parallelize the sum:
  parallelize {
    my $pid = parallel_id;
    my ($to_sum, $temporary)
      = retrieve_pdls('to-sum', 'workspace');
-   
+
    # Calculate the thread-specific slice bounds
    my $start = $stride * $pid;
    my $end = $start + $stride - 1;
    $end = $to_sum->nelem - 1 if $end >= $to_sum->nelem;
-   
+
    # Perform this thread's sum
    $temporary($pid)
      .= $to_sum($start:$end)->sum;
  });
- 
+
  # This code will not run until that launch has returned
  # for all threads, so at this point we can assume the
  # workspace memory has been filled.
  my $final_sum = retrieve_pdls('workspace')->sum;
- 
+
  print "The sum is $final_sum\n";
 
 As mentioned in the last comment in that example code, the last
@@ -284,7 +284,7 @@ follows:
 
  PDL::Parallel::threads::SIMD Execution
  ======================================
- 
+
          main thread
              |
              |
@@ -306,7 +306,7 @@ wait for the GPU to finish:
 
  CUDA Execution
  ==============
- 
+
  main thread
      |
      |
@@ -334,9 +334,9 @@ that could lead to I<VERY> confusing apparent errors in logic. For example:
  ...
  parallelize {
    my $pid = parallel_id;
-   
+
    # do some calculations
-   
+
    # Do some thread-specific work
    if ($pid < 5) {
      # Notice the *two* barriers set up here:
@@ -395,11 +395,11 @@ Usage:
 
   parallelize {
     # ...
-    
+
     parallel_sync;
-    
+
     # ...
-    
+
   } $N_threads;
 
 This function enforces barrier synchronization among all the threads in your
@@ -424,11 +424,11 @@ Usage:
 
   parallelize {
     # ...
-    
+
     my $pid = parallel_id;
-    
+
     # ...
-    
+
   } $N_threads;
 
 From within the L</parallelize> block, you obtain the current thread's

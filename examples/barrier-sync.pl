@@ -28,7 +28,7 @@ my $N_threads = 5;
 parallelize {
 	my $tid = parallel_id;
 	my $pdl = retrieve_pdls('test');
-	
+
 	print "Thread id $tid says the ndarray is $pdl\n";
 	parallel_sync;
 
@@ -36,13 +36,13 @@ parallelize {
 	my $idx = sequence($N_data_to_fix) * $N_threads + $tid;
 	$pdl($idx) .= $tid;
 	parallel_sync;
-	
+
 	print "After set, thread id $tid says the ndarray is $pdl\n";
 	parallel_sync;
-	
+
 	$pdl->set($tid, 0);
 	parallel_sync;
-	
+
 	print "Thread id $tid says the ndarray is now $pdl\n";
 } $N_threads;
 
@@ -50,7 +50,7 @@ print "mmap is $mmap\n";
 parallelize {
 	my $tid = parallel_id;
 	my $mmap = retrieve_pdls('mmap');
-	
+
 	$mmap($tid) .= $tid;
 } $N_threads;
 
@@ -59,14 +59,14 @@ print "now mmap is $mmap\n";
 parallelize {
 	my $tid = parallel_id;
 	my $pdl = retrieve_pdls('test');
-	
+
 	print "Thread id is $tid\n";
-	
+
 	my $N_data_to_fix = $pdl->nelem / $N_threads;
 	my $idx = sequence($N_data_to_fix - 1) * $N_threads + $tid;
 	use PDL::NiceSlice;
 	$pdl($idx) .= -$tid;
-	
+
 	my $slice = retrieve_pdls('slice');
 	$slice($tid) .= -10 * $tid;
 } $N_threads;

@@ -23,11 +23,11 @@ for my $thr (threads->list) {
 
 sub barrier_sync {
 	yield until $barrier_state eq 'ready' or $barrier_state eq 'up';
-	
+
 	lock($barrier_count);
 	$barrier_state = 'up';
 	$barrier_count++;
-	
+
 	if ($barrier_count == $N_threads) {
 		$barrier_count--;
 		$barrier_state = 'down';
@@ -44,16 +44,16 @@ sub barrier_sync {
 # This is the code that actually does calculations
 sub main {
 	my $tid = threads->self->tid;
-	
+
 	$data[$tid] = $tid;
 	barrier_sync;
-	
+
 	print "Thread id $tid says the array is ", join(', ', @data), "\n";
 	barrier_sync;
-	
+
 	$data[$tid] = 0;
 	barrier_sync;
-	
+
 	print "Thread id $tid says the array is now ", join(', ', @data), "\n";
 }
 
