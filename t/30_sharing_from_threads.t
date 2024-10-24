@@ -30,7 +30,8 @@ parallelize {
 	# Create data that is unique to this thread
 	my $pdl = ones(10) * $pid;
 	$pdl->share_as("data$pid");
-	my $bad = ones(5);
+	my $bad = ones(cfloat, 5);
+	$bad->badvalue(17);
 	$bad->setbadat(2);
 	$bad->share_as("bad$pid");
 
@@ -55,7 +56,7 @@ parallelize {
 
 		$to_test = retrieve_pdls("bad$thread_to_grab");
 		my $isbad = $to_test->isbad;
-		$bad_is_correct[$pid] = all($isbad == pdl(0,0,1,0,0))->sclr || diag "got=$isbad";
+		$bad_is_correct[$pid] = all($isbad == pdl(0,0,1,0,0))->sclr || diag "got=$isbad\nto_test=$to_test";
 
 		1;
 	} or do {

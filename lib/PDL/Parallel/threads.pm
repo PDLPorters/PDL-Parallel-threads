@@ -31,6 +31,7 @@ my %dataref_svs;
 my %dim_arrays :shared;
 my %types :shared;
 my %badflag :shared;
+my %badvalue :shared;
 my %nbytes :shared;
 my %originating_tid :shared;
 my %file_names :shared;
@@ -96,6 +97,9 @@ sub share_pdls {
 			}
 			$types{$name} = $to_store->get_datatype;
 			$badflag{$name} = $to_store->badflag;
+			my $badval = $to_store->badvalue->sclr;
+			$badval = shared_clone([$badval->Re,$badval->Im]) if ref $badval ;
+			$badvalue{$name} = $badval;
 		}
 		elsif (ref($to_store) eq '') {
 			# A file name, presumably; share via memory mapping
@@ -141,6 +145,7 @@ sub free_pdls {
 			delete $dim_arrays{$name};
 			delete $types{$name};
 			delete $badflag{$name};
+			delete $badvalue{$name};
 			delete $nbytes{$name};
 			delete $originating_tid{$name};
 			push @removed, $name;
@@ -189,6 +194,9 @@ sub retrieve_pdls {
 			my $new_ndarray = PDL->new_around_datasv($datasv_pointers{$name});
 			$new_ndarray->set_datatype($types{$name});
 			$new_ndarray->badflag($badflag{$name});
+			$new_ndarray->badvalue(ref $badvalue{$name}
+				? Math::Complex->make(@{$badvalue{$name}})
+				: $badvalue{$name});
 			$new_ndarray->setdims(\@{$dim_arrays{$name}});
 			$new_ndarray->set_donttouchdata($nbytes{$name}); # protect its memory
 			push @to_return, $new_ndarray;
@@ -493,7 +501,7 @@ collection of shared memory that you may need to use for your algorithm:
 
 =for bad
 
-C<share_pdls> preserves the badflag on ndarrays.
+C<share_pdls> preserves the badflag and badvalue on ndarrays.
 
 =head2 share_as
 
@@ -536,7 +544,7 @@ ndarray memory space.
 
 =for bad
 
-C<share_as> preserves the badflag on ndarrays.
+C<share_as> preserves the badflag and badvalue on ndarrays.
 
 =head2 retrieve_pdls
 
@@ -563,7 +571,7 @@ indicating that you probably meant to say something differently.
 
 =for bad
 
-C<retrieve_pdls> preserves the badflag on ndarrays.
+C<retrieve_pdls> preserves the badflag and badvalue on ndarrays.
 
 =head2 free_pdls
 

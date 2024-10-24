@@ -1,4 +1,4 @@
-- preserve badflag across threads
+- preserve badflag and bespoke badvalue across threads
 
 2024-09-06 0.06
 - move XS support functions to PDL 2.091, now pure perl
