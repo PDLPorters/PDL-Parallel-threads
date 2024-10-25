@@ -6,7 +6,7 @@ use warnings;
 use Test::More tests => 9;
 
 # Modules needed for actual testing
-use PDL;
+use PDL::LiteF;
 use PDL::Parallel::threads qw(retrieve_pdls);
 
 ########################

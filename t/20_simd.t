@@ -12,7 +12,6 @@ BEGIN {
 use Test::More;
 use Test::Warn;
 
-#use PDL;
 use PDL::Parallel::threads::SIMD qw(parallelize parallel_sync parallel_id);
 
 my $N_threads = 20;

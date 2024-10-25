@@ -13,7 +13,7 @@ use threads;
 use threads::shared;
 use Test::More;
 use Test::Exception;
-use PDL;
+use PDL::LiteF;
 use PDL::Parallel::threads qw(retrieve_pdls);
 
 # This is a somewhat complicated test script. The goals are to test the

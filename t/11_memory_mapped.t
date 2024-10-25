@@ -10,7 +10,7 @@ BEGIN {
 }
 
 use threads;
-use PDL;
+use PDL::LiteF;
 use PDL::Parallel::threads qw(retrieve_pdls);
 use PDL::IO::FastRaw;
 

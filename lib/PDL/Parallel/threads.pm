@@ -3,7 +3,7 @@ package PDL::Parallel::threads;
 use strict;
 use warnings;
 use Carp;
-use PDL;
+use PDL::LiteF;
 use PDL::Exporter;
 our $VERSION = '0.06';
 

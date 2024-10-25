@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 package My::Foo;
-use PDL;
+use PDL::LiteF;
 use PDL::Parallel::threads qw(retrieve_pdls);
 use Test::More;
 use Test::Exception;

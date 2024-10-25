@@ -14,7 +14,7 @@ BEGIN {
 use Test::More;
 use Test::Exception;
 
-use PDL;
+use PDL::LiteF;
 use PDL::Parallel::threads qw(retrieve_pdls);
 use PDL::Parallel::threads::SIMD qw(parallelize parallel_id parallel_sync);
 

@@ -3,7 +3,7 @@ use warnings;
 
 use Test::More;
 
-use PDL;
+use PDL::LiteF;
 use PDL::Parallel::threads qw(retrieve_pdls free_pdls);
 
 my $data = sequence(20);
