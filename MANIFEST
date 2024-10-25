@@ -8,7 +8,6 @@ lib/PDL/Parallel/threads/SIMD.pm
 Makefile.PL
 MANIFEST			This list of files
 README.pod
-t/00-load.t
 t/01_ref_counting.t
 t/02_non_threaded.t
 t/03_name_munging.t
